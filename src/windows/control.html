@@ -16,10 +16,16 @@
           <p class="eyebrow">ClawCast Studio · 爪播</p>
           <h1>AI 创作者录播控制台</h1>
         </div>
-        <div class="top-actions">
-          <button id="toggleOverlay" class="primary">显示名片</button>
-          <button id="togglePrompter">显示提词器</button>
-          <button id="resetPositions">重置位置</button>
+        <div class="top-action-stack">
+          <div class="top-actions">
+            <button id="toggleOverlay" class="primary">显示名片</button>
+            <button id="togglePrompter">显示提词器</button>
+            <button id="resetPositions">重置位置</button>
+            <button id="checkUpdate">检查更新</button>
+            <button id="runUpdate">一键更新</button>
+            <button id="restartApp" disabled>重启应用</button>
+          </div>
+          <p class="update-status" id="updateStatus">GitHub 同步：未检查</p>
         </div>
       </header>
 

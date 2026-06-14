@@ -102,6 +102,13 @@ h1 {
   letter-spacing: 0;
 }
 
+.top-action-stack {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  max-width: 760px;
+}
+
 .top-actions,
 .prompt-actions {
   display: flex;
@@ -112,6 +119,8 @@ h1 {
 
 .top-actions,
 .top-actions *,
+.top-action-stack,
+.top-action-stack *,
 .prompt-actions,
 .prompt-actions *,
 .preview-pane,
@@ -122,6 +131,33 @@ textarea,
 select,
 label {
   -webkit-app-region: no-drag;
+}
+
+.update-status {
+  max-width: 720px;
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.update-status[data-state="available"],
+.update-status[data-state="updated"] {
+  color: var(--claw-red);
+}
+
+.update-status[data-state="blocked"],
+.update-status[data-state="error"] {
+  color: #9f1f1f;
+}
+
+.update-status[data-state="busy"] {
+  color: #8b5a00;
 }
 
 .workspace {

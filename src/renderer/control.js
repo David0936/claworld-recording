@@ -14,6 +14,8 @@ let activeDrawFrame;
 let recordingStartedAt = 0;
 let recordingTimer;
 let lastRecordingPath = "";
+let updateCheckTimer;
+let lastUpdateStatus;
 
 const fields = {
   name: $("name"),
@@ -191,6 +193,39 @@ function renderPreview() {
     miniAvatar.removeAttribute("src");
     miniAvatarWrap.classList.remove("has-image");
   }
+}
+
+function updateStateCopy(status) {
+  if (!status) return "GitHub 同步：未检查";
+  const commit = status.current ? ` · 本地 ${status.current}` : "";
+  return `${status.title}${commit} · ${status.detail}`;
+}
+
+function renderUpdateStatus(status, busy = false) {
+  lastUpdateStatus = status || lastUpdateStatus;
+  const updateStatus = $("updateStatus");
+  updateStatus.textContent = busy ? "GitHub 同步：正在处理..." : updateStateCopy(lastUpdateStatus);
+  updateStatus.dataset.state = busy ? "busy" : lastUpdateStatus?.state || "idle";
+  $("checkUpdate").disabled = busy;
+  $("runUpdate").disabled = busy || !lastUpdateStatus?.canUpdate;
+  $("restartApp").disabled = busy || !lastUpdateStatus?.restartRequired;
+}
+
+async function refreshUpdateStatus(fetchRemote = false) {
+  renderUpdateStatus(lastUpdateStatus, true);
+  const status = await window.overlayApp.getUpdateStatus({ fetchRemote });
+  renderUpdateStatus(status);
+}
+
+async function runAppUpdate() {
+  renderUpdateStatus(lastUpdateStatus, true);
+  const status = await window.overlayApp.runUpdate();
+  renderUpdateStatus(status);
+}
+
+function scheduleInitialUpdateCheck() {
+  clearTimeout(updateCheckTimer);
+  updateCheckTimer = setTimeout(() => refreshUpdateStatus(false), 400);
 }
 
 function recordingModeLabel(mode) {
@@ -640,6 +675,9 @@ function setupBindings() {
   $("toggleOverlay").addEventListener("click", async () => syncForm(await window.overlayApp.toggleOverlay()));
   $("togglePrompter").addEventListener("click", async () => syncForm(await window.overlayApp.togglePrompter()));
   $("resetPositions").addEventListener("click", async () => syncForm(await window.overlayApp.resetPositions()));
+  $("checkUpdate").addEventListener("click", () => refreshUpdateStatus(true));
+  $("runUpdate").addEventListener("click", runAppUpdate);
+  $("restartApp").addEventListener("click", () => window.overlayApp.restartApp());
   $("refreshRecordingSources").addEventListener("click", refreshRecordingSources);
   $("openScreenPrivacy").addEventListener("click", () => window.overlayApp.openScreenPrivacy());
   $("selectRecordingRegion").addEventListener("click", selectRecordingRegion);
@@ -677,6 +715,7 @@ async function init() {
   setupBindings();
   syncForm(await window.overlayApp.getSettings());
   window.overlayApp.onSettingsChanged(syncForm);
+  scheduleInitialUpdateCheck();
   await refreshCameraDevices();
   await refreshRecordingSources();
 }

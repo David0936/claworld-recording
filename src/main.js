@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, session, screen, systemPreferences, shell, desktopCapturer } = require("electron");
+const { execFile } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { defaultSettings } = require("./defaultSettings");
@@ -16,9 +17,193 @@ const overlaySizes = {
   medium: { width: 360, height: 250 },
   large: { width: 430, height: 300 }
 };
+const updateRemote = "origin";
+const updateBranch = "main";
 
 function settingsPath() {
   return path.join(app.getPath("userData"), "settings.json");
+}
+
+function findGitRoot() {
+  const starts = [app.getAppPath(), __dirname, process.cwd()].filter(Boolean);
+  for (const start of starts) {
+    let dir = fs.existsSync(start) && fs.statSync(start).isFile() ? path.dirname(start) : start;
+    while (dir && dir !== path.dirname(dir)) {
+      if (fs.existsSync(path.join(dir, ".git"))) return dir;
+      dir = path.dirname(dir);
+    }
+  }
+  return null;
+}
+
+function runProcess(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    execFile(
+      command,
+      args,
+      {
+        cwd: options.cwd,
+        env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+        timeout: options.timeout || 120000,
+        maxBuffer: 1024 * 1024 * 8
+      },
+      (error, stdout, stderr) => {
+        const output = {
+          stdout: stdout.trim(),
+          stderr: stderr.trim()
+        };
+        if (error) {
+          error.output = output;
+          reject(error);
+          return;
+        }
+        resolve(output);
+      }
+    );
+  });
+}
+
+function runGit(args, cwd) {
+  return runProcess("git", args, { cwd });
+}
+
+function updateResult(base, state, title, detail, extra = {}) {
+  return {
+    state,
+    title,
+    detail,
+    canUpdate: false,
+    restartRequired: false,
+    ...base,
+    ...extra
+  };
+}
+
+async function getUpdateStatus(options = {}) {
+  const gitRoot = findGitRoot();
+  const base = { gitRoot, remote: updateRemote, branch: updateBranch };
+  if (!gitRoot) {
+    return updateResult(
+      base,
+      "unavailable",
+      "一键更新不可用",
+      "当前不是从 Git 仓库运行；打包版需要接 GitHub Release 更新。"
+    );
+  }
+
+  try {
+    const [branch, current, remoteUrl, dirtyStatus] = await Promise.all([
+      runGit(["rev-parse", "--abbrev-ref", "HEAD"], gitRoot),
+      runGit(["rev-parse", "--short", "HEAD"], gitRoot),
+      runGit(["config", "--get", `remote.${updateRemote}.url`], gitRoot).catch(() => ({ stdout: "" })),
+      runGit(["status", "--porcelain"], gitRoot)
+    ]);
+    const nextBase = {
+      ...base,
+      current: current.stdout,
+      currentBranch: branch.stdout,
+      dirty: Boolean(dirtyStatus.stdout),
+      remoteUrl: remoteUrl.stdout
+    };
+
+    if (options.fetchRemote) {
+      await runGit(["fetch", updateRemote, updateBranch], gitRoot);
+    }
+
+    const remoteRef = `${updateRemote}/${updateBranch}`;
+    const [latest, counts] = await Promise.all([
+      runGit(["rev-parse", "--short", remoteRef], gitRoot),
+      runGit(["rev-list", "--left-right", "--count", `HEAD...${remoteRef}`], gitRoot)
+    ]);
+    const [aheadText, behindText] = counts.stdout.split(/\s+/);
+    const ahead = Number(aheadText || 0);
+    const behind = Number(behindText || 0);
+    const statusBase = { ...nextBase, latest: latest.stdout, ahead, behind };
+
+    if (nextBase.dirty) {
+      return updateResult(
+        statusBase,
+        "blocked",
+        "本地有未提交改动",
+        "为了不覆盖你的工作，先提交或清理本地改动后再更新。"
+      );
+    }
+    if (ahead > 0 && behind > 0) {
+      return updateResult(
+        statusBase,
+        "blocked",
+        "本地和远端已分叉",
+        "需要手动处理 Git 合并后再一键更新。"
+      );
+    }
+    if (behind > 0) {
+      return updateResult(
+        statusBase,
+        "available",
+        "发现 GitHub 新版本",
+        `远端领先 ${behind} 个提交，点击一键更新同步。`,
+        { canUpdate: true }
+      );
+    }
+    if (ahead > 0) {
+      return updateResult(
+        statusBase,
+        "ahead",
+        "本地领先远端",
+        `本地领先 ${ahead} 个提交，先推送后其它设备才能同步。`
+      );
+    }
+    return updateResult(statusBase, "current", "已经是最新版本", `当前提交 ${current.stdout}。`);
+  } catch (error) {
+    return updateResult(
+      base,
+      "error",
+      "检查更新失败",
+      error.output?.stderr || error.output?.stdout || error.message
+    );
+  }
+}
+
+async function runSourceUpdate() {
+  const beforeStatus = await getUpdateStatus({ fetchRemote: true });
+  if (!beforeStatus.canUpdate || beforeStatus.dirty || !beforeStatus.gitRoot) {
+    return beforeStatus;
+  }
+
+  try {
+    const before = await runGit(["rev-parse", "HEAD"], beforeStatus.gitRoot);
+    await runGit(["pull", "--ff-only", updateRemote, updateBranch], beforeStatus.gitRoot);
+    const after = await runGit(["rev-parse", "HEAD"], beforeStatus.gitRoot);
+    const changedFiles = before.stdout === after.stdout
+      ? []
+      : (await runGit(["diff", "--name-only", before.stdout, after.stdout], beforeStatus.gitRoot)).stdout
+          .split("\n")
+          .filter(Boolean);
+    const dependencyChanged = changedFiles.some((file) => ["package.json", "package-lock.json"].includes(file));
+    if (dependencyChanged) {
+      await runProcess("npm", ["install"], { cwd: beforeStatus.gitRoot, timeout: 300000 });
+    }
+    const finalStatus = await getUpdateStatus();
+    return updateResult(
+      finalStatus,
+      "updated",
+      "更新完成",
+      dependencyChanged ? "已同步 GitHub 并更新依赖，请重启应用。" : "已同步 GitHub 最新代码，请重启应用。",
+      {
+        updated: true,
+        dependencyChanged,
+        changedFiles,
+        restartRequired: true
+      }
+    );
+  } catch (error) {
+    return updateResult(
+      beforeStatus,
+      "error",
+      "一键更新失败",
+      error.output?.stderr || error.output?.stdout || error.message
+    );
+  }
 }
 
 function isPlainObject(value) {
@@ -369,6 +554,13 @@ function registerIpc() {
   });
   ipcMain.handle("recording:show-file", async (_event, filePath) => {
     if (filePath) shell.showItemInFolder(filePath);
+    return true;
+  });
+  ipcMain.handle("update:get-status", (_event, options) => getUpdateStatus(options));
+  ipcMain.handle("update:run", () => runSourceUpdate());
+  ipcMain.handle("app:restart", () => {
+    app.relaunch({ args: process.argv.slice(1) });
+    app.exit(0);
     return true;
   });
 }

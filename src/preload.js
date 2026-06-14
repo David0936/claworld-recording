@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld("overlayApp", {
   cancelRegionSelection: () => ipcRenderer.invoke("region:cancel"),
   saveRecording: (payload) => ipcRenderer.invoke("recording:save", payload),
   showRecordingFile: (filePath) => ipcRenderer.invoke("recording:show-file", filePath),
+  getUpdateStatus: (options) => ipcRenderer.invoke("update:get-status", options),
+  runUpdate: () => ipcRenderer.invoke("update:run"),
+  restartApp: () => ipcRenderer.invoke("app:restart"),
   onRegionInit: (callback) => {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on("region:init", listener);
