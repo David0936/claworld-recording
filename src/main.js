@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, session, screen } = require("electron");
+const { app, BrowserWindow, ipcMain, globalShortcut, session, screen, systemPreferences, shell } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const { defaultSettings } = require("./defaultSettings");
@@ -254,6 +254,21 @@ function registerIpc() {
     if (prompterWindow && !prompterWindow.isDestroyed()) {
       prompterWindow.webContents.send("prompter:command", command);
     }
+    return true;
+  });
+  ipcMain.handle("camera:get-access-status", () => {
+    if (process.platform !== "darwin") return "unknown";
+    return systemPreferences.getMediaAccessStatus("camera");
+  });
+  ipcMain.handle("camera:request-access", async () => {
+    if (process.platform !== "darwin") return "unknown";
+    const status = systemPreferences.getMediaAccessStatus("camera");
+    if (status === "granted" || status === "denied" || status === "restricted") return status;
+    const granted = await systemPreferences.askForMediaAccess("camera");
+    return granted ? "granted" : systemPreferences.getMediaAccessStatus("camera");
+  });
+  ipcMain.handle("camera:open-privacy", async () => {
+    await shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Camera");
     return true;
   });
 }

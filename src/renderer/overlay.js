@@ -5,7 +5,11 @@ const nodes = {
   headline: document.getElementById("headline"),
   bio: document.getElementById("bio"),
   cta: document.getElementById("cta"),
+  avatar: document.querySelector(".avatar"),
   camera: document.getElementById("camera"),
+  cameraStatus: document.getElementById("cameraStatus"),
+  cameraStatusTitle: document.getElementById("cameraStatusTitle"),
+  cameraStatusDetail: document.getElementById("cameraStatusDetail"),
   avatarImage: document.getElementById("avatarImage"),
   initial: document.getElementById("initial")
 };
@@ -13,6 +17,38 @@ const nodes = {
 let cameraStream;
 let cameraKey = "";
 let cameraRequestId = 0;
+let latestSettings;
+let lastCameraFailure = "";
+
+function cameraFailureCopy(error) {
+  const name = error?.name || String(error || "");
+  if (name === "NotAllowedError" || name === "SecurityError") {
+    return ["权限被拒绝", "点此打开设置"];
+  }
+  if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+    return ["未发现摄像头", "检查设备连接"];
+  }
+  if (name === "NotReadableError" || name === "TrackStartError") {
+    return ["摄像头被占用", "关掉其它视频软件"];
+  }
+  if (name === "OverconstrainedError" || name === "ConstraintNotSatisfiedError") {
+    return ["设备不可用", "换默认摄像头"];
+  }
+  return ["CAM OFF", "点此重试"];
+}
+
+function setCameraStatus(title, detail, failure = "") {
+  lastCameraFailure = failure;
+  nodes.cameraStatusTitle.textContent = title;
+  nodes.cameraStatusDetail.textContent = detail;
+  nodes.avatar.classList.add("needs-attention");
+  nodes.avatar.classList.remove("show-camera");
+}
+
+function clearCameraStatus() {
+  lastCameraFailure = "";
+  nodes.avatar.classList.remove("needs-attention");
+}
 
 async function startCamera(settings) {
   const nextCameraKey = `${settings.profile.useCamera}:${settings.profile.cameraDeviceId || "default"}`;
@@ -26,6 +62,7 @@ async function startCamera(settings) {
 
   if (cameraStream && cameraKey === nextCameraKey) {
     renderAvatar(settings);
+    clearCameraStatus();
     nodes.camera.parentElement.classList.add("show-camera");
     nodes.camera.parentElement.classList.remove("show-image");
     return;
@@ -34,8 +71,16 @@ async function startCamera(settings) {
   cameraKey = nextCameraKey;
   stopCamera();
   const requestId = ++cameraRequestId;
+  clearCameraStatus();
+  setCameraStatus("连接中", "请稍等");
 
   try {
+    const access = await window.overlayApp.requestCameraAccess();
+    if (requestId !== cameraRequestId) return;
+    if (access === "denied" || access === "restricted") {
+      setCameraStatus("权限被拒绝", "点此打开设置", "permission");
+      return;
+    }
     const constraints = {
       audio: false,
       video: {
@@ -51,10 +96,18 @@ async function startCamera(settings) {
     }
     cameraStream = stream;
     nodes.camera.srcObject = stream;
+    await nodes.camera.play();
+    if (requestId !== cameraRequestId) return;
+    clearCameraStatus();
     nodes.camera.parentElement.classList.add("show-camera");
     nodes.camera.parentElement.classList.remove("show-image");
-  } catch {
-    if (requestId === cameraRequestId) renderAvatar(settings);
+  } catch (error) {
+    if (requestId === cameraRequestId) {
+      console.error("Camera start failed", error);
+      const [title, detail] = cameraFailureCopy(error);
+      setCameraStatus(title, detail, title === "权限被拒绝" ? "permission" : "retry");
+      renderAvatar(settings);
+    }
   }
 }
 
@@ -67,7 +120,7 @@ function stopCamera() {
 }
 
 function renderAvatar(settings) {
-  const avatar = nodes.camera.parentElement;
+  const avatar = nodes.avatar;
   avatar.classList.toggle("mirror", settings.profile.mirrorCamera);
   nodes.initial.textContent = (settings.profile.name || "D").trim().slice(0, 1).toUpperCase();
   if (settings.profile.avatarDataUrl) {
@@ -80,6 +133,7 @@ function renderAvatar(settings) {
 }
 
 function render(settings) {
+  latestSettings = settings;
   nodes.card.className = `card ${settings.overlay.style} ${settings.overlay.size}`;
   nodes.card.classList.toggle("no-cta", !settings.overlay.showCta);
   nodes.card.style.setProperty("--accent", settings.overlay.accentColor);
@@ -97,6 +151,14 @@ async function init() {
   const settings = await window.overlayApp.getSettings();
   render(settings);
   window.overlayApp.onSettingsChanged(render);
+  nodes.cameraStatus.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    if (lastCameraFailure === "permission") {
+      await window.overlayApp.openCameraPrivacy();
+      return;
+    }
+    if (latestSettings) startCamera(latestSettings);
+  });
 }
 
 window.addEventListener("beforeunload", stopCamera);

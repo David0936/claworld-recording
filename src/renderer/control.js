@@ -128,7 +128,11 @@ function renderPreview() {
 async function refreshCameraDevices() {
   const select = fields.cameraDeviceId;
   try {
-    await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    const access = await window.overlayApp.requestCameraAccess();
+    if (access === "denied" || access === "restricted") {
+      select.innerHTML = `<option value="">摄像头权限被拒绝</option>`;
+      return;
+    }
     const devices = await navigator.mediaDevices.enumerateDevices();
     const cameras = devices.filter((device) => device.kind === "videoinput");
     select.innerHTML = `<option value="">默认摄像头</option>`;
@@ -140,7 +144,7 @@ async function refreshCameraDevices() {
     }
     setInputValue(select, settings.profile.cameraDeviceId);
   } catch {
-    select.innerHTML = `<option value="">未授权或未发现摄像头</option>`;
+    select.innerHTML = `<option value="">未发现摄像头</option>`;
   }
 }
 

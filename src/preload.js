@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld("overlayApp", {
   togglePrompter: () => ipcRenderer.invoke("window:toggle-prompter"),
   resetPositions: () => ipcRenderer.invoke("window:reset-positions"),
   prompterCommand: (command) => ipcRenderer.invoke("prompter:command", command),
+  getCameraAccessStatus: () => ipcRenderer.invoke("camera:get-access-status"),
+  requestCameraAccess: () => ipcRenderer.invoke("camera:request-access"),
+  openCameraPrivacy: () => ipcRenderer.invoke("camera:open-privacy"),
   onSettingsChanged: (callback) => {
     const listener = (_event, settings) => callback(settings);
     ipcRenderer.on("settings:changed", listener);

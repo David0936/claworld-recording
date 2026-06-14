@@ -168,6 +168,49 @@ h1 {
   object-fit: cover;
 }
 
+.camera-status {
+  -webkit-app-region: no-drag;
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  gap: 2px;
+  border: 0;
+  color: #fff8ef;
+  background: #050505;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+}
+
+.camera-status strong {
+  display: block;
+  max-width: 72px;
+  overflow: hidden;
+  color: #fff8ef;
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.camera-status small {
+  display: block;
+  max-width: 72px;
+  overflow: hidden;
+  color: rgba(255, 248, 239, 0.64);
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar.needs-attention .camera-status {
+  display: grid;
+}
+
 .avatar.show-camera video,
 .avatar.show-image img {
   display: block;
@@ -184,7 +227,8 @@ h1 {
 }
 
 .avatar.show-camera span,
-.avatar.show-image span {
+.avatar.show-image span,
+.avatar.needs-attention span {
   display: none;
 }
 
