@@ -508,6 +508,14 @@ function registerIpc() {
     await shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Camera");
     return true;
   });
+  ipcMain.handle("microphone:get-access-status", () => {
+    if (process.platform !== "darwin") return "unknown";
+    return systemPreferences.getMediaAccessStatus("microphone");
+  });
+  ipcMain.handle("microphone:open-privacy", async () => {
+    await shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone");
+    return true;
+  });
   ipcMain.handle("recording:get-sources", async () => {
     const sources = await desktopCapturer.getSources({
       types: ["screen", "window"],

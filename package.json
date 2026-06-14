@@ -9,7 +9,9 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer/control.js && node --check src/renderer/overlay.js && node --check src/renderer/prompter.js && node --check src/renderer/region.js",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer/control.js && node --check src/renderer/overlay.js && node --check src/renderer/prompter.js && node --check src/renderer/region.js && node --check scripts/create-local-app.js",
+    "app:local": "node scripts/create-local-app.js",
+    "app:open": "open \"dist/ClawCast Studio.app\"",
     "pack": "electron-builder --dir",
     "dist:mac": "electron-builder --mac"
   },

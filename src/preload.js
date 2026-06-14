@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("overlayApp", {
   getCameraAccessStatus: () => ipcRenderer.invoke("camera:get-access-status"),
   requestCameraAccess: () => ipcRenderer.invoke("camera:request-access"),
   openCameraPrivacy: () => ipcRenderer.invoke("camera:open-privacy"),
+  getMicrophoneAccessStatus: () => ipcRenderer.invoke("microphone:get-access-status"),
+  openMicrophonePrivacy: () => ipcRenderer.invoke("microphone:open-privacy"),
   getRecordingSources: () => ipcRenderer.invoke("recording:get-sources"),
   getScreenAccessStatus: () => ipcRenderer.invoke("recording:get-screen-access-status"),
   openScreenPrivacy: () => ipcRenderer.invoke("recording:open-screen-privacy"),

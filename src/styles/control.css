@@ -400,6 +400,100 @@ label {
   font-weight: 950;
 }
 
+.permission-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto auto;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.permission-card {
+  display: grid;
+  gap: 4px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.permission-card span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.permission-card strong {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.permission-card[data-state="granted"] {
+  border-color: rgba(20, 138, 73, 0.3);
+  background: rgba(20, 138, 73, 0.08);
+}
+
+.permission-card[data-state="blocked"] {
+  border-color: rgba(176, 0, 32, 0.28);
+  background: rgba(176, 0, 32, 0.06);
+}
+
+.permission-card[data-state="unknown"] {
+  border-color: rgba(217, 144, 0, 0.28);
+  background: rgba(217, 144, 0, 0.07);
+}
+
+.source-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 10px;
+  min-height: 0;
+}
+
+.source-card {
+  display: grid;
+  gap: 8px;
+  min-height: 116px;
+  padding: 8px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.source-card img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  object-fit: cover;
+  background: #111;
+}
+
+.source-card span {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-card.active {
+  border-color: rgba(245, 29, 42, 0.66);
+  box-shadow: 0 0 0 3px rgba(245, 29, 42, 0.1);
+}
+
+.source-empty {
+  min-height: 48px;
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.58);
+}
+
 .recording-status span {
   grid-row: 1 / span 2;
   width: 11px;
@@ -413,12 +507,10 @@ label {
 }
 
 .recording-status small {
-  overflow: hidden;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .recording-status[data-state="recording"] span {
@@ -594,6 +686,10 @@ input[type="color"] {
   }
 
   .quick-recording-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .permission-panel {
     grid-template-columns: 1fr;
   }
 }

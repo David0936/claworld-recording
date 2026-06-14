@@ -176,6 +176,22 @@
               <strong id="recordingStatusTitle">未开始录屏</strong>
               <small id="recordingStatusDetail">选择屏幕、窗口或框选区域后点击开始。</small>
             </div>
+            <div class="permission-panel">
+              <div class="permission-card" id="screenPermissionCard">
+                <span>屏幕录制</span>
+                <strong id="screenPermissionText">检查中</strong>
+              </div>
+              <div class="permission-card" id="cameraPermissionCard">
+                <span>摄像头</span>
+                <strong id="cameraPermissionText">检查中</strong>
+              </div>
+              <div class="permission-card" id="micPermissionCard">
+                <span>麦克风</span>
+                <strong id="micPermissionText">检查中</strong>
+              </div>
+              <button id="refreshPermissions" type="button">刷新权限状态</button>
+              <button id="restartAfterPermission" type="button">授权后重启 App</button>
+            </div>
             <div class="grid two">
               <label>
                 录制范围
@@ -198,6 +214,7 @@
               屏幕或窗口
               <select id="recordingSourceId"></select>
             </label>
+            <div class="source-picker" id="sourcePicker"></div>
             <div class="grid three recording-source-actions">
               <button id="refreshRecordingSources" type="button">刷新可录窗口</button>
               <button id="openScreenPrivacy" type="button">打开录屏权限设置</button>

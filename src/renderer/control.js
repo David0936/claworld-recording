@@ -138,6 +138,7 @@ function syncForm(next) {
   setInputValue(fields.includeMic, settings.recording.includeMic);
   renderPreview();
   renderRecordingControls();
+  renderSourcePicker();
   renderRegionSummary();
 }
 
@@ -234,6 +235,32 @@ function recordingModeLabel(mode) {
   return "屏幕";
 }
 
+function permissionCopy(status) {
+  if (status === "granted") return ["已授权", "granted"];
+  if (status === "denied" || status === "restricted") return ["未授权", "blocked"];
+  if (status === "not-determined") return ["待授权", "unknown"];
+  return ["未知", "unknown"];
+}
+
+function setPermissionCard(cardId, textId, status) {
+  const [copy, state] = permissionCopy(status);
+  const card = $(cardId);
+  card.dataset.state = state;
+  $(textId).textContent = copy;
+}
+
+async function refreshPermissionState() {
+  const [screenAccess, cameraAccess, micAccess] = await Promise.all([
+    window.overlayApp.getScreenAccessStatus().catch(() => "unknown"),
+    window.overlayApp.getCameraAccessStatus().catch(() => "unknown"),
+    window.overlayApp.getMicrophoneAccessStatus().catch(() => "unknown")
+  ]);
+  setPermissionCard("screenPermissionCard", "screenPermissionText", screenAccess);
+  setPermissionCard("cameraPermissionCard", "cameraPermissionText", cameraAccess);
+  setPermissionCard("micPermissionCard", "micPermissionText", micAccess);
+  return { screenAccess, cameraAccess, micAccess };
+}
+
 function formatDuration(ms) {
   const total = Math.max(0, Math.floor(ms / 1000));
   const minutes = String(Math.floor(total / 60)).padStart(2, "0");
@@ -272,6 +299,7 @@ function screenAccessNeedsManualGrant(status) {
 function showScreenPermissionRequired(openSettings = false) {
   recordingSources = [];
   fields.recordingSourceId.innerHTML = `<option value="">录屏权限未开启</option>`;
+  renderSourcePicker();
   setRecordingStatus(
     "需要开启录屏权限",
     "在系统设置 > 隐私与安全性 > 屏幕与系统音频录制里勾选“爪播”，然后退出并重新打开 App。",
@@ -292,6 +320,7 @@ function renderRecordingSources() {
     option.value = "";
     option.textContent = mode === "window" ? "未发现可录窗口" : "未发现屏幕";
     select.append(option);
+    renderSourcePicker();
     renderRecordingControls();
     return;
   }
@@ -305,7 +334,50 @@ function renderRecordingSources() {
 
   const currentId = settings.recording.sourceId;
   select.value = sources.some((source) => source.id === currentId) ? currentId : sources[0].id;
+  renderSourcePicker();
   renderRecordingControls();
+}
+
+function renderSourcePicker() {
+  const container = $("sourcePicker");
+  if (!container) return;
+  const mode = fields.recordingMode.value || settings?.recording?.mode || "screen";
+  const sources = visibleRecordingSources(mode);
+  container.innerHTML = "";
+
+  if (!sources.length) {
+    const empty = document.createElement("div");
+    empty.className = "source-empty";
+    empty.textContent = mode === "window"
+      ? "暂无可选窗口。打开目标软件后点“刷新可录窗口”。"
+      : "暂无可选屏幕。先开启录屏权限，然后点“刷新可录窗口”。";
+    container.append(empty);
+    return;
+  }
+
+  for (const source of sources.slice(0, 12)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "source-card";
+    button.classList.toggle("active", source.id === fields.recordingSourceId.value);
+    button.title = source.name;
+
+    if (source.thumbnail) {
+      const image = document.createElement("img");
+      image.src = source.thumbnail;
+      image.alt = source.name;
+      button.append(image);
+    }
+
+    const name = document.createElement("span");
+    name.textContent = source.name;
+    button.append(name);
+    button.addEventListener("click", async () => {
+      fields.recordingSourceId.value = source.id;
+      await updateRecordingSource();
+    });
+    container.append(button);
+  }
 }
 
 function renderRegionSummary() {
@@ -353,7 +425,7 @@ function renderRecordingControls() {
 async function refreshRecordingSources(options = {}) {
   fields.recordingSourceId.innerHTML = `<option value="">正在读取屏幕和窗口...</option>`;
   try {
-    const access = await window.overlayApp.getScreenAccessStatus();
+    const { screenAccess: access } = await refreshPermissionState();
     if (screenAccessNeedsManualGrant(access)) {
       showScreenPermissionRequired(Boolean(options.openSettings));
       return;
@@ -452,6 +524,7 @@ async function updateRecordingSource() {
     sourceName: source?.name || "",
     region: fields.recordingMode.value === "region" ? settings.recording.region : null
   });
+  renderSourcePicker();
 }
 
 async function updateRecordingFrameRate() {
@@ -775,6 +848,8 @@ function setupBindings() {
   $("checkUpdate").addEventListener("click", () => refreshUpdateStatus(true));
   $("runUpdate").addEventListener("click", runAppUpdate);
   $("restartApp").addEventListener("click", () => window.overlayApp.restartApp());
+  $("restartAfterPermission").addEventListener("click", () => window.overlayApp.restartApp());
+  $("refreshPermissions").addEventListener("click", refreshPermissionState);
   $("quickRecord").addEventListener("click", quickRecordScreen);
   $("quickRecordInPanel").addEventListener("click", quickRecordScreen);
   $("quickSelectWindow").addEventListener("click", quickSelectWindow);
@@ -817,6 +892,7 @@ async function init() {
   syncForm(await window.overlayApp.getSettings());
   window.overlayApp.onSettingsChanged(syncForm);
   scheduleInitialUpdateCheck();
+  await refreshPermissionState();
   await refreshCameraDevices();
   await refreshRecordingSources();
 }
