@@ -19,6 +19,10 @@
     "icon": "src/assets/branding/app-logo.icns",
     "mac": {
       "category": "public.app-category.video",
+      "extendInfo": {
+        "NSCameraUsageDescription": "爪播需要访问摄像头，用于录课名片里的真人画面。",
+        "NSMicrophoneUsageDescription": "爪播需要访问麦克风，用于录制你的讲解声音。"
+      },
       "target": [
         "dmg",
         "zip"

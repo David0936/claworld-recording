@@ -265,6 +265,22 @@ function visibleRecordingSources(mode = fields.recordingMode.value) {
   return recordingSources.filter((source) => source.type === type);
 }
 
+function screenAccessNeedsManualGrant(status) {
+  return ["denied", "restricted", "not-determined"].includes(status);
+}
+
+function showScreenPermissionRequired(openSettings = false) {
+  recordingSources = [];
+  fields.recordingSourceId.innerHTML = `<option value="">录屏权限未开启</option>`;
+  setRecordingStatus(
+    "需要开启录屏权限",
+    "在系统设置 > 隐私与安全性 > 屏幕与系统音频录制里勾选“爪播”，然后退出并重新打开 App。",
+    "error"
+  );
+  renderRecordingControls();
+  if (openSettings) window.overlayApp.openScreenPrivacy();
+}
+
 function renderRecordingSources() {
   const select = fields.recordingSourceId;
   const mode = fields.recordingMode.value || settings.recording.mode;
@@ -334,15 +350,29 @@ function renderRecordingControls() {
   fields.includeMic.disabled = isRecording;
 }
 
-async function refreshRecordingSources() {
+async function refreshRecordingSources(options = {}) {
   fields.recordingSourceId.innerHTML = `<option value="">正在读取屏幕和窗口...</option>`;
   try {
+    const access = await window.overlayApp.getScreenAccessStatus();
+    if (screenAccessNeedsManualGrant(access)) {
+      showScreenPermissionRequired(Boolean(options.openSettings));
+      return;
+    }
     recordingSources = await window.overlayApp.getRecordingSources();
+    if (!recordingSources.length) {
+      showScreenPermissionRequired(false);
+      return;
+    }
     renderRecordingSources();
   } catch (error) {
     console.error("Failed to load recording sources", error);
     fields.recordingSourceId.innerHTML = `<option value="">读取失败，请检查录屏权限</option>`;
-    setRecordingStatus("读取录屏来源失败", "去系统设置开启屏幕录制权限后重试。", "error");
+    setRecordingStatus(
+      "读取录屏来源失败",
+      "请在系统设置里允许“爪播”录制屏幕；授权后需要退出并重新打开 App。",
+      "error"
+    );
+    if (options.openSettings) window.overlayApp.openScreenPrivacy();
   }
 }
 
@@ -370,7 +400,7 @@ async function chooseFirstRecordingSource(mode) {
     sourceName: "",
     region: mode === "region" ? settings.recording.region : null
   });
-  await refreshRecordingSources();
+  await refreshRecordingSources({ openSettings: true });
   const sources = visibleRecordingSources(mode);
   if (!sources.length) return null;
   fields.recordingSourceId.value = sources[0].id;
@@ -384,7 +414,7 @@ async function quickRecordScreen() {
   setRecordingStatus("准备快速录屏", "正在选择当前屏幕。", "saving");
   const source = await chooseFirstRecordingSource("screen");
   if (!source) {
-    setRecordingStatus("没有可录屏幕", "请打开录屏权限后点击刷新。", "error");
+    showScreenPermissionRequired(true);
     return;
   }
   await startRecording();
@@ -396,7 +426,8 @@ async function quickSelectWindow() {
   setRecordingStatus("准备选择窗口", "正在读取当前可录制窗口。", "saving");
   const source = await chooseFirstRecordingSource("window");
   if (!source) {
-    setRecordingStatus("未发现可录窗口", "请先打开要录制的软件窗口，再点刷新。", "error");
+    setRecordingStatus("未发现可录窗口", "先打开要录制的软件；如果下拉框仍然读取失败，就去系统设置勾选“爪播”录屏权限。", "error");
+    window.overlayApp.openScreenPrivacy();
     return;
   }
   setRecordingStatus("已切到窗口录制", `当前选择：${source.name}。可在下拉框切换其它窗口。`, "idle");
@@ -748,7 +779,7 @@ function setupBindings() {
   $("quickRecordInPanel").addEventListener("click", quickRecordScreen);
   $("quickSelectWindow").addEventListener("click", quickSelectWindow);
   $("quickSelectWindowInPanel").addEventListener("click", quickSelectWindow);
-  $("refreshRecordingSources").addEventListener("click", refreshRecordingSources);
+  $("refreshRecordingSources").addEventListener("click", () => refreshRecordingSources({ openSettings: true }));
   $("openScreenPrivacy").addEventListener("click", () => window.overlayApp.openScreenPrivacy());
   $("selectRecordingRegion").addEventListener("click", selectRecordingRegion);
   $("startRecording").addEventListener("click", startRecording);
