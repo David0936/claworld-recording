@@ -109,7 +109,9 @@ function createControlWindow() {
     })
   );
 
-  controlWindow.setContentProtection(true);
+  // The control panel is part of the user's working screen and should be visible
+  // in screenshots/recordings. Only the teleprompter uses capture protection.
+  controlWindow.setContentProtection(false);
   controlWindow.loadFile(path.join(__dirname, "windows/control.html"));
   controlWindow.once("ready-to-show", () => controlWindow.show());
   controlWindow.on("resize", () => {

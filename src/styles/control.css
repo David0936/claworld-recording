@@ -6,10 +6,10 @@
   --ink-soft: #241d1b;
   --bone: #fff8ef;
   --paper: #ffffff;
-  --warm: #f2e8dc;
-  --line: rgba(8, 8, 8, 0.12);
+  --warm: #f6eee5;
+  --line: rgba(8, 8, 8, 0.1);
   --muted: #6d625d;
-  --shadow: 0 22px 58px rgba(42, 20, 13, 0.12);
+  --shadow: 0 18px 44px rgba(42, 20, 13, 0.08);
 }
 
 * {
@@ -24,8 +24,8 @@ body {
     sans-serif;
   color: var(--ink);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 248, 239, 0.95)),
-    repeating-linear-gradient(90deg, rgba(8, 8, 8, 0.032) 0 1px, transparent 1px 72px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 248, 239, 0.98)),
+    radial-gradient(circle at 4% 4%, rgba(245, 29, 42, 0.1), transparent 28%),
     var(--bone);
 }
 
@@ -42,7 +42,7 @@ button {
   border-radius: 8px;
   padding: 10px 14px;
   color: var(--ink);
-  background: var(--paper);
+  background: rgba(255, 255, 255, 0.74);
   cursor: pointer;
 }
 
@@ -59,22 +59,22 @@ button.primary {
 
 .shell {
   min-height: 100vh;
-  padding: 34px 36px 36px;
+  padding: 24px 28px 28px;
 }
 
 .topbar {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .brand-lockup {
   display: flex;
   align-items: center;
   width: min(340px, 42vw);
-  height: 52px;
+  height: 42px;
   overflow: hidden;
 }
 
@@ -85,7 +85,7 @@ button.primary {
 }
 
 .eyebrow {
-  margin: 12px 0 5px;
+  margin: 9px 0 4px;
   color: var(--claw-red);
   font-size: 12px;
   font-weight: 900;
@@ -96,7 +96,7 @@ button.primary {
 h1 {
   margin: 0;
   font-family: "Arial Black", Impact, ui-sans-serif, system-ui, sans-serif;
-  font-size: 34px;
+  font-size: 28px;
   line-height: 1.02;
   letter-spacing: 0;
 }
@@ -111,8 +111,8 @@ h1 {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(278px, 358px) minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(286px, 336px) minmax(0, 1fr);
+  gap: 16px;
   align-items: start;
 }
 
@@ -120,20 +120,22 @@ h1 {
 .panel {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.72);
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
 }
 
 .preview-pane {
-  padding: 16px;
-  background: rgba(8, 8, 8, 0.94);
+  padding: 14px;
+  background:
+    linear-gradient(160deg, rgba(245, 29, 42, 0.14), transparent 42%),
+    rgba(8, 8, 8, 0.94);
 }
 
 .mini-card {
   position: relative;
   overflow: hidden;
-  min-height: 278px;
+  min-height: 238px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   color: var(--bone);
@@ -156,7 +158,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 13px 16px 11px 20px;
+  padding: 11px 14px 10px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 248, 239, 0.82);
   font-size: 11px;
@@ -183,9 +185,9 @@ h1 {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 84px;
-  gap: 14px;
-  padding: 18px 18px 10px 22px;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  gap: 12px;
+  padding: 16px 16px 8px 20px;
   align-items: start;
 }
 
@@ -214,7 +216,7 @@ h1 {
   overflow: hidden;
   margin: 8px 0 6px;
   font-family: "Arial Black", Impact, ui-sans-serif, system-ui, sans-serif;
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -233,7 +235,7 @@ h1 {
 .miniBio {
   margin-top: 12px;
   color: rgba(255, 248, 239, 0.82);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.55;
   white-space: pre-line;
 }
@@ -245,8 +247,8 @@ h1 {
 .mini-avatar {
   position: relative;
   display: grid;
-  width: 78px;
-  height: 78px;
+  width: 70px;
+  height: 70px;
   place-items: center;
   overflow: hidden;
   border: 3px solid var(--preview-accent, var(--claw-red));
@@ -282,8 +284,8 @@ h1 {
 .mini-cta {
   position: relative;
   z-index: 1;
-  margin: 12px 18px 18px 22px;
-  padding: 10px 12px;
+  margin: 10px 16px 16px 20px;
+  padding: 9px 11px;
   border-radius: 8px;
   color: var(--bone);
   background: var(--preview-accent, var(--claw-red));
@@ -297,11 +299,11 @@ h1 {
   gap: 8px;
   margin-top: 14px;
   color: rgba(255, 248, 239, 0.78);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .window-status span {
-  padding: 10px 12px;
+  padding: 9px 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
@@ -314,7 +316,7 @@ h1 {
 .tabs {
   display: flex;
   gap: 6px;
-  padding: 12px;
+  padding: 10px;
   border-bottom: 1px solid var(--line);
   background: rgba(255, 248, 239, 0.72);
 }
@@ -333,12 +335,12 @@ h1 {
 
 .tab-panel {
   display: none;
-  padding: 20px;
+  padding: 18px;
 }
 
 .tab-panel.active {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .grid {
@@ -354,7 +356,7 @@ label {
   display: grid;
   gap: 8px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -362,8 +364,8 @@ label {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 44px;
-  padding: 10px 12px;
+  min-height: 40px;
+  padding: 9px 11px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 248, 239, 0.68);
@@ -381,7 +383,7 @@ select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 11px 12px;
+  padding: 10px 11px;
   color: var(--ink);
   background: var(--paper);
   outline: none;

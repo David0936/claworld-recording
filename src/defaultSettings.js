@@ -36,8 +36,8 @@ const defaultSettings = {
   },
   windows: {
     control: {
-      width: 1040,
-      height: 760
+      width: 1120,
+      height: 720
     },
     overlay: {
       x: null,
