@@ -18,6 +18,8 @@
         </div>
         <div class="top-action-stack">
           <div class="top-actions">
+            <button id="quickRecord" class="primary" type="button">快速录屏</button>
+            <button id="quickSelectWindow" type="button">快速选窗口</button>
             <button id="toggleOverlay" class="primary">显示名片</button>
             <button id="togglePrompter">显示提词器</button>
             <button id="resetPositions">重置位置</button>
@@ -165,6 +167,10 @@
           </form>
 
           <form class="tab-panel" id="recordingPanel" data-panel="recording">
+            <div class="quick-recording-bar">
+              <button id="quickRecordInPanel" type="button" class="primary">一键录当前屏幕</button>
+              <button id="quickSelectWindowInPanel" type="button">快速选择窗口</button>
+            </div>
             <div class="recording-status" id="recordingStatus">
               <span id="recordingDot"></span>
               <strong id="recordingStatusTitle">未开始录屏</strong>

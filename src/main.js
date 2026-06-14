@@ -444,6 +444,15 @@ function applyWindowSettings() {
   applyPrompterSettings();
 }
 
+function recordingPayloadToBuffer(payload = {}) {
+  const input = payload.bytes ?? payload.buffer;
+  if (Buffer.isBuffer(input)) return input;
+  if (Array.isArray(input)) return Buffer.from(input);
+  if (ArrayBuffer.isView(input)) return Buffer.from(input.buffer, input.byteOffset, input.byteLength);
+  if (input instanceof ArrayBuffer) return Buffer.from(input);
+  throw new Error("没有收到可写入的视频数据。");
+}
+
 function registerIpc() {
   ipcMain.handle("settings:get", () => settings);
   ipcMain.handle("settings:update", (_event, partial) => updateSettings(partial));
@@ -550,8 +559,16 @@ function registerIpc() {
     fs.mkdirSync(dir, { recursive: true });
     const safeName = new Date().toISOString().replace(/[:.]/g, "-");
     const filePath = path.join(dir, `ClawCast-${safeName}.webm`);
-    fs.writeFileSync(filePath, Buffer.from(payload.buffer));
-    return { path: filePath };
+    const buffer = recordingPayloadToBuffer(payload);
+    if (!buffer.length) {
+      throw new Error("录屏数据为空，没有写入文件。");
+    }
+    fs.writeFileSync(filePath, buffer);
+    const { size } = fs.statSync(filePath);
+    if (!size) {
+      throw new Error("文件已创建但大小为 0。");
+    }
+    return { path: filePath, size };
   });
   ipcMain.handle("recording:show-file", async (_event, filePath) => {
     if (filePath) shell.showItemInFolder(filePath);

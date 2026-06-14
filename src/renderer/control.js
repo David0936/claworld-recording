@@ -315,6 +315,14 @@ function renderRecordingControls() {
   const isRecording = isRecordingActive();
   const mode = fields.recordingMode.value;
   const hasSource = Boolean(fields.recordingSourceId.value);
+  for (const id of ["quickRecord", "quickRecordInPanel"]) {
+    const button = $(id);
+    if (button) button.disabled = isRecording;
+  }
+  for (const id of ["quickSelectWindow", "quickSelectWindowInPanel"]) {
+    const button = $(id);
+    if (button) button.disabled = isRecording;
+  }
   $("startRecording").disabled = isRecording || !hasSource;
   $("stopRecording").disabled = !isRecording;
   $("openRecordingFile").disabled = !lastRecordingPath;
@@ -338,10 +346,61 @@ async function refreshRecordingSources() {
   }
 }
 
+function activateTab(tabName) {
+  const tab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+  const panel = document.querySelector(`[data-panel="${tabName}"]`);
+  if (!tab || !panel) return;
+  document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach((item) => item.classList.remove("active"));
+  tab.classList.add("active");
+  panel.classList.add("active");
+}
+
 async function updateRecordingSettings(partial) {
   settings = await window.overlayApp.updateSettings({ recording: partial });
   renderRecordingControls();
   renderRegionSummary();
+}
+
+async function chooseFirstRecordingSource(mode) {
+  fields.recordingMode.value = mode;
+  await updateRecordingSettings({
+    mode,
+    sourceId: "",
+    sourceName: "",
+    region: mode === "region" ? settings.recording.region : null
+  });
+  await refreshRecordingSources();
+  const sources = visibleRecordingSources(mode);
+  if (!sources.length) return null;
+  fields.recordingSourceId.value = sources[0].id;
+  await updateRecordingSource();
+  return sources[0];
+}
+
+async function quickRecordScreen() {
+  if (isRecordingActive()) return;
+  activateTab("recording");
+  setRecordingStatus("准备快速录屏", "正在选择当前屏幕。", "saving");
+  const source = await chooseFirstRecordingSource("screen");
+  if (!source) {
+    setRecordingStatus("没有可录屏幕", "请打开录屏权限后点击刷新。", "error");
+    return;
+  }
+  await startRecording();
+}
+
+async function quickSelectWindow() {
+  if (isRecordingActive()) return;
+  activateTab("recording");
+  setRecordingStatus("准备选择窗口", "正在读取当前可录制窗口。", "saving");
+  const source = await chooseFirstRecordingSource("window");
+  if (!source) {
+    setRecordingStatus("未发现可录窗口", "请先打开要录制的软件窗口，再点刷新。", "error");
+    return;
+  }
+  setRecordingStatus("已切到窗口录制", `当前选择：${source.name}。可在下拉框切换其它窗口。`, "idle");
+  fields.recordingSourceId.focus();
 }
 
 async function updateRecordingMode() {
@@ -495,13 +554,20 @@ async function saveCurrentRecording(mimeType) {
   setRecordingStatus("正在保存", "视频会保存到影片/ClawCast Studio。", "saving");
   try {
     const blob = new Blob(recordedChunks, { type: mimeType || "video/webm" });
+    if (!blob.size) {
+      throw new Error("录屏数据为空，可能录制刚开始就停止了。");
+    }
     const buffer = await blob.arrayBuffer();
-    const saved = await window.overlayApp.saveRecording({ buffer, mimeType: blob.type });
+    const saved = await window.overlayApp.saveRecording({
+      bytes: new Uint8Array(buffer),
+      mimeType: blob.type,
+      size: blob.size
+    });
     lastRecordingPath = saved.path;
-    setRecordingStatus("录屏已保存", saved.path, "done");
+    setRecordingStatus("录屏已保存", `${saved.path} · ${Math.round(saved.size / 1024)} KB`, "done");
   } catch (error) {
     console.error("Recording save failed", error);
-    setRecordingStatus("保存失败", "录屏数据没有成功写入文件。", "error");
+    setRecordingStatus("保存失败", error?.message || "录屏数据没有成功写入文件。", "error");
   } finally {
     cleanupRecordingStreams();
     mediaRecorder = null;
@@ -678,6 +744,10 @@ function setupBindings() {
   $("checkUpdate").addEventListener("click", () => refreshUpdateStatus(true));
   $("runUpdate").addEventListener("click", runAppUpdate);
   $("restartApp").addEventListener("click", () => window.overlayApp.restartApp());
+  $("quickRecord").addEventListener("click", quickRecordScreen);
+  $("quickRecordInPanel").addEventListener("click", quickRecordScreen);
+  $("quickSelectWindow").addEventListener("click", quickSelectWindow);
+  $("quickSelectWindowInPanel").addEventListener("click", quickSelectWindow);
   $("refreshRecordingSources").addEventListener("click", refreshRecordingSources);
   $("openScreenPrivacy").addEventListener("click", () => window.overlayApp.openScreenPrivacy());
   $("selectRecordingRegion").addEventListener("click", selectRecordingRegion);
