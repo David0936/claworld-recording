@@ -28,12 +28,30 @@ function isBuiltInCamera(label = "") {
   return /facetime|built-?in|macbook|display camera|studio display|hd camera|内建|内置/i.test(label);
 }
 
-async function chooseCameraDeviceId(preferredDeviceId) {
+function normalizedCameraSource(settings) {
+  const source = settings?.profile?.cameraSource;
+  return source === "phone" || source === "manual" ? source : "local";
+}
+
+async function chooseCameraDeviceId(preferredDeviceId, source = "local") {
   const devices = await navigator.mediaDevices.enumerateDevices();
   const cameras = devices.filter((device) => device.kind === "videoinput");
   if (!cameras.length) return "";
 
   const preferred = cameras.find((device) => device.deviceId === preferredDeviceId);
+
+  if (source === "manual") {
+    return preferred?.deviceId || "";
+  }
+
+  if (source === "phone") {
+    if (preferred && isContinuityCamera(preferred.label)) {
+      return preferredDeviceId;
+    }
+    const phone = cameras.find((device) => isContinuityCamera(device.label));
+    return phone?.deviceId || preferred?.deviceId || "";
+  }
+
   if (preferred && !isContinuityCamera(preferred.label)) {
     return preferredDeviceId;
   }
@@ -76,7 +94,8 @@ function clearCameraStatus() {
 }
 
 async function startCamera(settings) {
-  const nextCameraKey = `${settings.profile.useCamera}:${settings.profile.cameraDeviceId || "default"}`;
+  const source = normalizedCameraSource(settings);
+  const nextCameraKey = `${settings.profile.useCamera}:${source}:${settings.profile.cameraDeviceId || "default"}`;
   if (!settings.profile.useCamera) {
     cameraRequestId += 1;
     cameraKey = nextCameraKey;
@@ -106,7 +125,7 @@ async function startCamera(settings) {
       setCameraStatus("权限被拒绝", "点此打开设置", "permission");
       return;
     }
-    const deviceId = await chooseCameraDeviceId(settings.profile.cameraDeviceId);
+    const deviceId = await chooseCameraDeviceId(settings.profile.cameraDeviceId, source);
     if (requestId !== cameraRequestId) return;
     const constraints = {
       audio: false,

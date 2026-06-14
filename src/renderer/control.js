@@ -2,6 +2,7 @@ const $ = (id) => document.getElementById(id);
 
 let settings;
 let updateTimer;
+let cameraDevices = [];
 
 const fields = {
   name: $("name"),
@@ -11,6 +12,7 @@ const fields = {
   cta: $("cta"),
   useCamera: $("useCamera"),
   mirrorCamera: $("mirrorCamera"),
+  cameraSource: $("cameraSource"),
   cameraDeviceId: $("cameraDeviceId"),
   size: $("size"),
   style: $("style"),
@@ -37,15 +39,40 @@ function isBuiltInCamera(label = "") {
   return /facetime|built-?in|macbook|display camera|studio display|hd camera|内建|内置/i.test(label);
 }
 
-function preferredCamera(cameras, currentDeviceId) {
+function normalizedCameraSource(nextSettings = settings) {
+  const source = nextSettings?.profile?.cameraSource;
+  return source === "phone" || source === "manual" ? source : "local";
+}
+
+function pickCameraForSource(cameras, source, currentDeviceId) {
   const current = cameras.find((device) => device.deviceId === currentDeviceId);
+
+  if (source === "manual") {
+    return current?.deviceId || "";
+  }
+
+  if (source === "phone") {
+    if (current && isContinuityCamera(current.label)) {
+      return currentDeviceId;
+    }
+    const phone = cameras.find((device) => isContinuityCamera(device.label));
+    return phone?.deviceId || current?.deviceId || "";
+  }
+
   if (current && !isContinuityCamera(current.label)) {
     return currentDeviceId;
   }
+
   const builtIn = cameras.find((device) => isBuiltInCamera(device.label) && !isContinuityCamera(device.label));
   if (builtIn) return builtIn.deviceId;
+
   const nonContinuity = cameras.find((device) => !isContinuityCamera(device.label));
   return nonContinuity?.deviceId || cameras[0]?.deviceId || "";
+}
+
+function sourceForManualDevice(device) {
+  if (!device) return normalizedCameraSource();
+  return isContinuityCamera(device.label) ? "phone" : "manual";
 }
 
 function setInputValue(input, value) {
@@ -71,6 +98,7 @@ function syncForm(next) {
   setInputValue(fields.cta, settings.profile.cta);
   setInputValue(fields.useCamera, settings.profile.useCamera);
   setInputValue(fields.mirrorCamera, settings.profile.mirrorCamera);
+  setInputValue(fields.cameraSource, normalizedCameraSource(settings));
   setInputValue(fields.cameraDeviceId, settings.profile.cameraDeviceId);
   setInputValue(fields.size, settings.overlay.size);
   setInputValue(fields.style, settings.overlay.style);
@@ -154,7 +182,8 @@ async function refreshCameraDevices() {
     }
     const devices = await navigator.mediaDevices.enumerateDevices();
     const cameras = devices.filter((device) => device.kind === "videoinput");
-    select.innerHTML = `<option value="">自动：优先本机摄像头</option>`;
+    cameraDevices = cameras;
+    select.innerHTML = `<option value="">自动匹配来源</option>`;
     for (const device of cameras) {
       const option = document.createElement("option");
       option.value = device.deviceId;
@@ -163,14 +192,39 @@ async function refreshCameraDevices() {
       option.textContent = `${label}${suffix}`;
       select.append(option);
     }
-    const preferredDeviceId = preferredCamera(cameras, settings.profile.cameraDeviceId);
-    if (preferredDeviceId && preferredDeviceId !== settings.profile.cameraDeviceId) {
+    const source = normalizedCameraSource(settings);
+    const preferredDeviceId = pickCameraForSource(cameras, source, settings.profile.cameraDeviceId);
+    if (source !== "manual" && preferredDeviceId && preferredDeviceId !== settings.profile.cameraDeviceId) {
       settings = await window.overlayApp.updateSettings({ profile: { cameraDeviceId: preferredDeviceId } });
     }
+    setInputValue(fields.cameraSource, normalizedCameraSource(settings));
     setInputValue(select, settings.profile.cameraDeviceId);
   } catch {
+    cameraDevices = [];
     select.innerHTML = `<option value="">未发现摄像头</option>`;
   }
+}
+
+async function updateCameraSource() {
+  settings = await window.overlayApp.updateSettings({
+    profile: {
+      cameraSource: fields.cameraSource.value
+    }
+  });
+  await refreshCameraDevices();
+  syncForm(settings);
+}
+
+async function updateCameraDevice() {
+  const deviceId = fields.cameraDeviceId.value;
+  const device = cameraDevices.find((item) => item.deviceId === deviceId);
+  settings = await window.overlayApp.updateSettings({
+    profile: {
+      cameraDeviceId: deviceId,
+      cameraSource: deviceId ? sourceForManualDevice(device) : normalizedCameraSource(settings)
+    }
+  });
+  syncForm(settings);
 }
 
 function setupTabs() {
@@ -192,7 +246,8 @@ function setupBindings() {
   bindInput(fields.cta, ["profile", "cta"]);
   bindInput(fields.useCamera, ["profile", "useCamera"]);
   bindInput(fields.mirrorCamera, ["profile", "mirrorCamera"]);
-  bindInput(fields.cameraDeviceId, ["profile", "cameraDeviceId"]);
+  fields.cameraSource.addEventListener("change", updateCameraSource);
+  fields.cameraDeviceId.addEventListener("change", updateCameraDevice);
   bindInput(fields.size, ["overlay", "size"]);
   bindInput(fields.style, ["overlay", "style"]);
   bindInput(fields.accentColor, ["overlay", "accentColor"]);

@@ -68,6 +68,7 @@ button.primary {
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 18px;
+  -webkit-app-region: drag;
 }
 
 .brand-lockup {
@@ -107,6 +108,20 @@ h1 {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
+}
+
+.top-actions,
+.top-actions *,
+.prompt-actions,
+.prompt-actions *,
+.preview-pane,
+.panel,
+button,
+input,
+textarea,
+select,
+label {
+  -webkit-app-region: no-drag;
 }
 
 .workspace {

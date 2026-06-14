@@ -7,6 +7,7 @@ const defaultSettings = {
     cta: "关注我，一起把想法做成作品",
     avatarDataUrl: "",
     useCamera: true,
+    cameraSource: "local",
     cameraDeviceId: "",
     mirrorCamera: true
   },

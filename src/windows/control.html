@@ -90,10 +90,20 @@
                 <span>镜像摄像头</span>
               </label>
             </div>
-            <label>
-              摄像头
-              <select id="cameraDeviceId"></select>
-            </label>
+            <div class="grid two">
+              <label>
+                摄像头来源
+                <select id="cameraSource">
+                  <option value="local">本电脑摄像头</option>
+                  <option value="phone">手机摄像头</option>
+                  <option value="manual">手动选择</option>
+                </select>
+              </label>
+              <label>
+                摄像头设备
+                <select id="cameraDeviceId"></select>
+              </label>
+            </div>
             <label>
               头像图片
               <input id="avatarInput" type="file" accept="image/*" />
@@ -141,7 +151,7 @@
               </label>
               <label class="toggle-line">
                 <input id="locked" type="checkbox" />
-                <span>锁定名片鼠标</span>
+                <span>鼠标穿透（锁定位置）</span>
               </label>
             </div>
           </form>
