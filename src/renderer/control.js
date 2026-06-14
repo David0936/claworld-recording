@@ -3,6 +3,17 @@ const $ = (id) => document.getElementById(id);
 let settings;
 let updateTimer;
 let cameraDevices = [];
+let recordingSources = [];
+let mediaRecorder;
+let recordedChunks = [];
+let activeDisplayStream;
+let activeMicStream;
+let activeCanvasStream;
+let activeRegionVideo;
+let activeDrawFrame;
+let recordingStartedAt = 0;
+let recordingTimer;
+let lastRecordingPath = "";
 
 const fields = {
   name: $("name"),
@@ -28,7 +39,11 @@ const fields = {
   opacity: $("opacity"),
   prompterVisible: $("prompterVisible"),
   protectedFromCapture: $("protectedFromCapture"),
-  clickThrough: $("clickThrough")
+  clickThrough: $("clickThrough"),
+  recordingMode: $("recordingMode"),
+  recordingFrameRate: $("recordingFrameRate"),
+  recordingSourceId: $("recordingSourceId"),
+  includeMic: $("includeMic")
 };
 
 function isContinuityCamera(label = "") {
@@ -115,7 +130,13 @@ function syncForm(next) {
   setInputValue(fields.prompterVisible, settings.prompter.visible);
   setInputValue(fields.protectedFromCapture, settings.prompter.protectedFromCapture);
   setInputValue(fields.clickThrough, settings.prompter.clickThrough);
+  setInputValue(fields.recordingMode, settings.recording.mode);
+  setInputValue(fields.recordingFrameRate, settings.recording.frameRate);
+  setInputValue(fields.recordingSourceId, settings.recording.sourceId);
+  setInputValue(fields.includeMic, settings.recording.includeMic);
   renderPreview();
+  renderRecordingControls();
+  renderRegionSummary();
 }
 
 function scheduleUpdate(partial) {
@@ -170,6 +191,354 @@ function renderPreview() {
     miniAvatar.removeAttribute("src");
     miniAvatarWrap.classList.remove("has-image");
   }
+}
+
+function recordingModeLabel(mode) {
+  if (mode === "window") return "窗口";
+  if (mode === "region") return "区域";
+  return "屏幕";
+}
+
+function formatDuration(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const minutes = String(Math.floor(total / 60)).padStart(2, "0");
+  const seconds = String(total % 60).padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function preferredMimeType() {
+  const candidates = [
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm"
+  ];
+  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || "";
+}
+
+function setRecordingStatus(title, detail, state = "idle") {
+  $("recordingStatusTitle").textContent = title;
+  $("recordingStatusDetail").textContent = detail;
+  $("recordingStatus").dataset.state = state;
+}
+
+function selectedRecordingSource() {
+  return recordingSources.find((source) => source.id === fields.recordingSourceId.value);
+}
+
+function visibleRecordingSources(mode = fields.recordingMode.value) {
+  const type = mode === "window" ? "window" : "screen";
+  return recordingSources.filter((source) => source.type === type);
+}
+
+function renderRecordingSources() {
+  const select = fields.recordingSourceId;
+  const mode = fields.recordingMode.value || settings.recording.mode;
+  const sources = visibleRecordingSources(mode);
+  select.innerHTML = "";
+
+  if (!sources.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = mode === "window" ? "未发现可录窗口" : "未发现屏幕";
+    select.append(option);
+    renderRecordingControls();
+    return;
+  }
+
+  for (const source of sources) {
+    const option = document.createElement("option");
+    option.value = source.id;
+    option.textContent = `${recordingModeLabel(mode)} · ${source.name}`;
+    select.append(option);
+  }
+
+  const currentId = settings.recording.sourceId;
+  select.value = sources.some((source) => source.id === currentId) ? currentId : sources[0].id;
+  renderRecordingControls();
+}
+
+function renderRegionSummary() {
+  const region = settings?.recording?.region;
+  const summary = $("regionSummary");
+  if (!summary) return;
+  if (fields.recordingMode.value !== "region") {
+    summary.textContent = "切换到“框选区域”后，可以拖拽选择录制范围。";
+    return;
+  }
+  if (!region) {
+    summary.textContent = "未选择区域";
+    return;
+  }
+  summary.textContent = `已选择区域：${Math.round(region.width)} x ${Math.round(region.height)}，位置 ${Math.round(region.x)}, ${Math.round(region.y)}`;
+}
+
+function isRecordingActive() {
+  return mediaRecorder && mediaRecorder.state !== "inactive";
+}
+
+function renderRecordingControls() {
+  const isRecording = isRecordingActive();
+  const mode = fields.recordingMode.value;
+  const hasSource = Boolean(fields.recordingSourceId.value);
+  $("startRecording").disabled = isRecording || !hasSource;
+  $("stopRecording").disabled = !isRecording;
+  $("openRecordingFile").disabled = !lastRecordingPath;
+  $("selectRecordingRegion").disabled = isRecording || mode !== "region" || !hasSource;
+  $("refreshRecordingSources").disabled = isRecording;
+  fields.recordingMode.disabled = isRecording;
+  fields.recordingFrameRate.disabled = isRecording;
+  fields.recordingSourceId.disabled = isRecording;
+  fields.includeMic.disabled = isRecording;
+}
+
+async function refreshRecordingSources() {
+  fields.recordingSourceId.innerHTML = `<option value="">正在读取屏幕和窗口...</option>`;
+  try {
+    recordingSources = await window.overlayApp.getRecordingSources();
+    renderRecordingSources();
+  } catch (error) {
+    console.error("Failed to load recording sources", error);
+    fields.recordingSourceId.innerHTML = `<option value="">读取失败，请检查录屏权限</option>`;
+    setRecordingStatus("读取录屏来源失败", "去系统设置开启屏幕录制权限后重试。", "error");
+  }
+}
+
+async function updateRecordingSettings(partial) {
+  settings = await window.overlayApp.updateSettings({ recording: partial });
+  renderRecordingControls();
+  renderRegionSummary();
+}
+
+async function updateRecordingMode() {
+  await updateRecordingSettings({
+    mode: fields.recordingMode.value,
+    sourceId: "",
+    sourceName: "",
+    region: null
+  });
+  renderRecordingSources();
+  renderRegionSummary();
+}
+
+async function updateRecordingSource() {
+  const source = selectedRecordingSource();
+  await updateRecordingSettings({
+    sourceId: source?.id || "",
+    sourceName: source?.name || "",
+    region: fields.recordingMode.value === "region" ? settings.recording.region : null
+  });
+}
+
+async function updateRecordingFrameRate() {
+  await updateRecordingSettings({ frameRate: Number(fields.recordingFrameRate.value) });
+}
+
+async function updateIncludeMic() {
+  await updateRecordingSettings({ includeMic: fields.includeMic.checked });
+}
+
+async function selectRecordingRegion() {
+  const source = selectedRecordingSource();
+  if (!source) {
+    setRecordingStatus("先选择屏幕", "区域录制需要先选择要框选的屏幕。", "error");
+    return;
+  }
+  setRecordingStatus("等待框选区域", "在透明选择层里拖拽，然后点击“使用这个区域”。", "idle");
+  const region = await window.overlayApp.selectRecordingRegion(source.displayId);
+  if (!region) {
+    setRecordingStatus("已取消框选", "可以重新点击“框选录制区域”。", "idle");
+    return;
+  }
+  await updateRecordingSettings({
+    mode: "region",
+    sourceId: source.id,
+    sourceName: source.name,
+    region
+  });
+  syncForm(settings);
+}
+
+async function getDesktopStream(sourceId, frameRate) {
+  return navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: {
+      mandatory: {
+        chromeMediaSource: "desktop",
+        chromeMediaSourceId: sourceId,
+        maxFrameRate: frameRate
+      }
+    }
+  });
+}
+
+async function createRegionStream(displayStream, region, frameRate) {
+  const video = document.createElement("video");
+  video.srcObject = displayStream;
+  video.muted = true;
+  video.playsInline = true;
+  await new Promise((resolve) => {
+    video.onloadedmetadata = resolve;
+  });
+  await video.play();
+
+  const scaleX = video.videoWidth / region.displayWidth;
+  const scaleY = video.videoHeight / region.displayHeight;
+  const sourceX = Math.max(0, Math.round(region.x * scaleX));
+  const sourceY = Math.max(0, Math.round(region.y * scaleY));
+  const sourceWidth = Math.max(2, Math.round(region.width * scaleX));
+  const sourceHeight = Math.max(2, Math.round(region.height * scaleY));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
+  const context = canvas.getContext("2d");
+
+  function draw() {
+    context.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
+    activeDrawFrame = requestAnimationFrame(draw);
+  }
+
+  activeRegionVideo = video;
+  draw();
+  activeCanvasStream = canvas.captureStream(frameRate);
+  return activeCanvasStream;
+}
+
+async function createRecordingStream(sourceId, mode, region, includeMic, frameRate) {
+  activeDisplayStream = await getDesktopStream(sourceId, frameRate);
+  const videoStream = mode === "region" ? await createRegionStream(activeDisplayStream, region, frameRate) : activeDisplayStream;
+  const tracks = [...videoStream.getVideoTracks()];
+
+  if (includeMic) {
+    activeMicStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      },
+      video: false
+    });
+    tracks.push(...activeMicStream.getAudioTracks());
+  }
+
+  return new MediaStream(tracks);
+}
+
+function cleanupRecordingStreams() {
+  if (activeDrawFrame) {
+    cancelAnimationFrame(activeDrawFrame);
+    activeDrawFrame = null;
+  }
+  for (const stream of [activeCanvasStream, activeDisplayStream, activeMicStream]) {
+    if (!stream) continue;
+    for (const track of stream.getTracks()) track.stop();
+  }
+  activeCanvasStream = null;
+  activeDisplayStream = null;
+  activeMicStream = null;
+  if (activeRegionVideo) {
+    activeRegionVideo.pause();
+    activeRegionVideo.srcObject = null;
+    activeRegionVideo = null;
+  }
+}
+
+function startRecordingTimer() {
+  clearInterval(recordingTimer);
+  recordingTimer = setInterval(() => {
+    setRecordingStatus("正在录屏", `${formatDuration(Date.now() - recordingStartedAt)} · 点击停止并保存`, "recording");
+  }, 500);
+}
+
+function stopRecordingTimer() {
+  clearInterval(recordingTimer);
+  recordingTimer = null;
+}
+
+async function saveCurrentRecording(mimeType) {
+  stopRecordingTimer();
+  setRecordingStatus("正在保存", "视频会保存到影片/ClawCast Studio。", "saving");
+  try {
+    const blob = new Blob(recordedChunks, { type: mimeType || "video/webm" });
+    const buffer = await blob.arrayBuffer();
+    const saved = await window.overlayApp.saveRecording({ buffer, mimeType: blob.type });
+    lastRecordingPath = saved.path;
+    setRecordingStatus("录屏已保存", saved.path, "done");
+  } catch (error) {
+    console.error("Recording save failed", error);
+    setRecordingStatus("保存失败", "录屏数据没有成功写入文件。", "error");
+  } finally {
+    cleanupRecordingStreams();
+    mediaRecorder = null;
+    recordedChunks = [];
+    renderRecordingControls();
+  }
+}
+
+function recordingErrorCopy(error) {
+  const name = error?.name || String(error || "");
+  if (name === "NotAllowedError" || name === "SecurityError") {
+    return ["录屏权限被拒绝", "去系统设置开启屏幕录制权限，或允许麦克风权限。"];
+  }
+  if (name === "NotReadableError") {
+    return ["无法读取录制来源", "目标窗口可能关闭了，刷新后重选。"];
+  }
+  return ["开始录屏失败", "刷新来源或重新选择窗口后再试。"];
+}
+
+async function startRecording() {
+  const source = selectedRecordingSource();
+  const mode = fields.recordingMode.value;
+  const frameRate = Number(fields.recordingFrameRate.value);
+  const includeMic = fields.includeMic.checked;
+  const region = settings.recording.region;
+
+  if (!source) {
+    setRecordingStatus("没有录制来源", "先刷新并选择屏幕或窗口。", "error");
+    return;
+  }
+  if (mode === "region" && !region) {
+    setRecordingStatus("还没框选区域", "点击“框选录制区域”后再开始。", "error");
+    return;
+  }
+
+  await updateRecordingSettings({
+    mode,
+    sourceId: source.id,
+    sourceName: source.name,
+    includeMic,
+    frameRate
+  });
+
+  setRecordingStatus("正在请求录屏权限", "如果系统弹窗出现，请允许屏幕录制。", "saving");
+  try {
+    const stream = await createRecordingStream(source.id, mode, region, includeMic, frameRate);
+    recordedChunks = [];
+    const mimeType = preferredMimeType();
+    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    mediaRecorder.addEventListener("dataavailable", (event) => {
+      if (event.data && event.data.size > 0) recordedChunks.push(event.data);
+    });
+    mediaRecorder.addEventListener("stop", () => saveCurrentRecording(mediaRecorder.mimeType));
+    mediaRecorder.start(1000);
+    recordingStartedAt = Date.now();
+    startRecordingTimer();
+    setRecordingStatus("正在录屏", "00:00 · 点击停止并保存", "recording");
+    renderRecordingControls();
+  } catch (error) {
+    console.error("Recording start failed", error);
+    cleanupRecordingStreams();
+    const [title, detail] = recordingErrorCopy(error);
+    setRecordingStatus(title, detail, "error");
+    renderRecordingControls();
+  }
+}
+
+function stopRecording() {
+  if (!isRecordingActive()) return;
+  setRecordingStatus("正在结束录屏", "马上保存文件。", "saving");
+  mediaRecorder.stop();
+  renderRecordingControls();
 }
 
 async function refreshCameraDevices() {
@@ -263,10 +632,20 @@ function setupBindings() {
   bindInput(fields.prompterVisible, ["prompter", "visible"]);
   bindInput(fields.protectedFromCapture, ["prompter", "protectedFromCapture"]);
   bindInput(fields.clickThrough, ["prompter", "clickThrough"]);
+  fields.recordingMode.addEventListener("change", updateRecordingMode);
+  fields.recordingSourceId.addEventListener("change", updateRecordingSource);
+  fields.recordingFrameRate.addEventListener("change", updateRecordingFrameRate);
+  fields.includeMic.addEventListener("change", updateIncludeMic);
 
   $("toggleOverlay").addEventListener("click", async () => syncForm(await window.overlayApp.toggleOverlay()));
   $("togglePrompter").addEventListener("click", async () => syncForm(await window.overlayApp.togglePrompter()));
   $("resetPositions").addEventListener("click", async () => syncForm(await window.overlayApp.resetPositions()));
+  $("refreshRecordingSources").addEventListener("click", refreshRecordingSources);
+  $("openScreenPrivacy").addEventListener("click", () => window.overlayApp.openScreenPrivacy());
+  $("selectRecordingRegion").addEventListener("click", selectRecordingRegion);
+  $("startRecording").addEventListener("click", startRecording);
+  $("stopRecording").addEventListener("click", stopRecording);
+  $("openRecordingFile").addEventListener("click", () => window.overlayApp.showRecordingFile(lastRecordingPath));
   $("playPrompter").addEventListener("click", async () => {
     syncForm(await window.overlayApp.updateSettings({ prompter: { running: true } }));
   });
@@ -299,6 +678,7 @@ async function init() {
   syncForm(await window.overlayApp.getSettings());
   window.overlayApp.onSettingsChanged(syncForm);
   await refreshCameraDevices();
+  await refreshRecordingSources();
 }
 
 init();

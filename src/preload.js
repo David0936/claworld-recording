@@ -11,6 +11,19 @@ contextBridge.exposeInMainWorld("overlayApp", {
   getCameraAccessStatus: () => ipcRenderer.invoke("camera:get-access-status"),
   requestCameraAccess: () => ipcRenderer.invoke("camera:request-access"),
   openCameraPrivacy: () => ipcRenderer.invoke("camera:open-privacy"),
+  getRecordingSources: () => ipcRenderer.invoke("recording:get-sources"),
+  getScreenAccessStatus: () => ipcRenderer.invoke("recording:get-screen-access-status"),
+  openScreenPrivacy: () => ipcRenderer.invoke("recording:open-screen-privacy"),
+  selectRecordingRegion: (displayId) => ipcRenderer.invoke("recording:select-region", displayId),
+  finishRegionSelection: (region) => ipcRenderer.invoke("region:finish", region),
+  cancelRegionSelection: () => ipcRenderer.invoke("region:cancel"),
+  saveRecording: (payload) => ipcRenderer.invoke("recording:save", payload),
+  showRecordingFile: (filePath) => ipcRenderer.invoke("recording:show-file", filePath),
+  onRegionInit: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on("region:init", listener);
+    return () => ipcRenderer.removeListener("region:init", listener);
+  },
   onSettingsChanged: (callback) => {
     const listener = (_event, settings) => callback(settings);
     ipcRenderer.on("settings:changed", listener);

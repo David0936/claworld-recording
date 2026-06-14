@@ -54,6 +54,7 @@
           <div class="tabs" role="tablist">
             <button class="tab active" data-tab="profile">个人名片</button>
             <button class="tab" data-tab="style">悬浮样式</button>
+            <button class="tab" data-tab="recording">开始录屏</button>
             <button class="tab" data-tab="prompter">口播提词</button>
           </div>
 
@@ -153,6 +154,51 @@
                 <input id="locked" type="checkbox" />
                 <span>鼠标穿透（锁定位置）</span>
               </label>
+            </div>
+          </form>
+
+          <form class="tab-panel" id="recordingPanel" data-panel="recording">
+            <div class="recording-status" id="recordingStatus">
+              <span id="recordingDot"></span>
+              <strong id="recordingStatusTitle">未开始录屏</strong>
+              <small id="recordingStatusDetail">选择屏幕、窗口或框选区域后点击开始。</small>
+            </div>
+            <div class="grid two">
+              <label>
+                录制范围
+                <select id="recordingMode">
+                  <option value="screen">整个屏幕</option>
+                  <option value="window">应用窗口</option>
+                  <option value="region">框选区域</option>
+                </select>
+              </label>
+              <label>
+                帧率
+                <select id="recordingFrameRate">
+                  <option value="24">24 fps</option>
+                  <option value="30">30 fps</option>
+                  <option value="60">60 fps</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              屏幕或窗口
+              <select id="recordingSourceId"></select>
+            </label>
+            <div class="grid three recording-source-actions">
+              <button id="refreshRecordingSources" type="button">刷新可录窗口</button>
+              <button id="openScreenPrivacy" type="button">打开录屏权限设置</button>
+              <button id="selectRecordingRegion" type="button">框选录制区域</button>
+            </div>
+            <div class="region-summary" id="regionSummary">未选择区域</div>
+            <label class="toggle-line">
+              <input id="includeMic" type="checkbox" />
+              <span>同时录麦克风</span>
+            </label>
+            <div class="recording-actions">
+              <button id="startRecording" type="button" class="primary">开始录屏</button>
+              <button id="stopRecording" type="button" disabled>停止并保存</button>
+              <button id="openRecordingFile" type="button" disabled>打开最近文件</button>
             </div>
           </form>
 

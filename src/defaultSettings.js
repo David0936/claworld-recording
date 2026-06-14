@@ -35,6 +35,14 @@ const defaultSettings = {
     opacity: 0.84,
     script: "开场：大家好，我是 David，一个从土木转行到 AI 产品经理的人。\n\n今天这条视频，我想分享一个真实项目开发过程：从一个模糊想法，到拆需求、搭原型、写代码、测试，再到最终发布。\n\n我会尽量讲人话，不堆术语。你会看到我怎么用 AI 当协作伙伴，而不是只把它当搜索框。\n\n如果你也想转 AI 产品、做自己的项目，或者打造个人 IP，可以先关注我。我们一起把想法做成作品。"
   },
+  recording: {
+    mode: "screen",
+    sourceId: "",
+    sourceName: "",
+    includeMic: true,
+    frameRate: 30,
+    region: null
+  },
   windows: {
     control: {
       width: 1120,

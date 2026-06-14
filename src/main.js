@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, session, screen, systemPreferences, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, globalShortcut, session, screen, systemPreferences, shell, desktopCapturer } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const { defaultSettings } = require("./defaultSettings");
@@ -7,6 +7,8 @@ let settings = structuredClone(defaultSettings);
 let controlWindow;
 let overlayWindow;
 let prompterWindow;
+let regionWindow;
+let pendingRegionSelection;
 let saveTimer;
 
 const overlaySizes = {
@@ -185,6 +187,44 @@ function createPrompterWindow() {
   prompterWindow.on("resize", persistPrompterBounds);
 }
 
+function createRegionWindow(display) {
+  const bounds = display.bounds;
+  regionWindow = new BrowserWindow(
+    windowOptions({
+      ...bounds,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      movable: false,
+      hasShadow: false,
+      skipTaskbar: true,
+      focusable: true,
+      title: "ClawCast Region Selector"
+    })
+  );
+  regionWindow.setAlwaysOnTop(true, "screen-saver");
+  regionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  regionWindow.loadFile(path.join(__dirname, "windows/region.html"));
+  regionWindow.once("ready-to-show", () => {
+    regionWindow.webContents.send("region:init", {
+      displayId: String(display.id),
+      displayX: bounds.x,
+      displayY: bounds.y,
+      displayWidth: bounds.width,
+      displayHeight: bounds.height,
+      scaleFactor: display.scaleFactor || 1
+    });
+    regionWindow.show();
+  });
+  regionWindow.on("closed", () => {
+    regionWindow = null;
+    if (pendingRegionSelection) {
+      pendingRegionSelection.resolve(null);
+      pendingRegionSelection = null;
+    }
+  });
+}
+
 function persistPrompterBounds() {
   if (!prompterWindow || prompterWindow.isDestroyed()) return;
   const [x, y] = prompterWindow.getPosition();
@@ -273,6 +313,64 @@ function registerIpc() {
     await shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Camera");
     return true;
   });
+  ipcMain.handle("recording:get-sources", async () => {
+    const sources = await desktopCapturer.getSources({
+      types: ["screen", "window"],
+      thumbnailSize: { width: 360, height: 220 },
+      fetchWindowIcons: true
+    });
+    return sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      type: source.id.startsWith("screen:") ? "screen" : "window",
+      displayId: source.display_id || "",
+      thumbnail: source.thumbnail?.toDataURL() || ""
+    }));
+  });
+  ipcMain.handle("recording:get-screen-access-status", () => {
+    if (process.platform !== "darwin") return "unknown";
+    return systemPreferences.getMediaAccessStatus("screen");
+  });
+  ipcMain.handle("recording:open-screen-privacy", async () => {
+    await shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture");
+    return true;
+  });
+  ipcMain.handle("recording:select-region", async (_event, displayId) => {
+    if (pendingRegionSelection) return null;
+    const displays = screen.getAllDisplays();
+    const display = displays.find((item) => String(item.id) === String(displayId)) || screen.getPrimaryDisplay();
+    return new Promise((resolve) => {
+      pendingRegionSelection = { resolve };
+      createRegionWindow(display);
+    });
+  });
+  ipcMain.handle("region:finish", (_event, region) => {
+    if (!pendingRegionSelection) return false;
+    pendingRegionSelection.resolve(region);
+    pendingRegionSelection = null;
+    if (regionWindow && !regionWindow.isDestroyed()) regionWindow.close();
+    return true;
+  });
+  ipcMain.handle("region:cancel", () => {
+    if (pendingRegionSelection) {
+      pendingRegionSelection.resolve(null);
+      pendingRegionSelection = null;
+    }
+    if (regionWindow && !regionWindow.isDestroyed()) regionWindow.close();
+    return true;
+  });
+  ipcMain.handle("recording:save", async (_event, payload) => {
+    const dir = path.join(app.getPath("movies"), "ClawCast Studio");
+    fs.mkdirSync(dir, { recursive: true });
+    const safeName = new Date().toISOString().replace(/[:.]/g, "-");
+    const filePath = path.join(dir, `ClawCast-${safeName}.webm`);
+    fs.writeFileSync(filePath, Buffer.from(payload.buffer));
+    return { path: filePath };
+  });
+  ipcMain.handle("recording:show-file", async (_event, filePath) => {
+    if (filePath) shell.showItemInFolder(filePath);
+    return true;
+  });
 }
 
 function registerShortcuts() {
@@ -291,7 +389,7 @@ app.whenReady().then(() => {
   loadSettings();
   registerIpc();
   session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-    callback(["media", "camera", "microphone"].includes(permission));
+    callback(["media", "camera", "microphone", "display-capture"].includes(permission));
   });
   createControlWindow();
   createOverlayWindow();
