@@ -20,6 +20,31 @@ let cameraRequestId = 0;
 let latestSettings;
 let lastCameraFailure = "";
 
+function isContinuityCamera(label = "") {
+  return /iphone|continuity|desk view|接续|连续互通|手机/i.test(label);
+}
+
+function isBuiltInCamera(label = "") {
+  return /facetime|built-?in|macbook|display camera|studio display|hd camera|内建|内置/i.test(label);
+}
+
+async function chooseCameraDeviceId(preferredDeviceId) {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const cameras = devices.filter((device) => device.kind === "videoinput");
+  if (!cameras.length) return "";
+
+  const preferred = cameras.find((device) => device.deviceId === preferredDeviceId);
+  if (preferred && !isContinuityCamera(preferred.label)) {
+    return preferredDeviceId;
+  }
+
+  const builtIn = cameras.find((device) => isBuiltInCamera(device.label) && !isContinuityCamera(device.label));
+  if (builtIn) return builtIn.deviceId;
+
+  const nonContinuity = cameras.find((device) => !isContinuityCamera(device.label));
+  return (nonContinuity || cameras[0]).deviceId;
+}
+
 function cameraFailureCopy(error) {
   const name = error?.name || String(error || "");
   if (name === "NotAllowedError" || name === "SecurityError") {
@@ -81,12 +106,14 @@ async function startCamera(settings) {
       setCameraStatus("权限被拒绝", "点此打开设置", "permission");
       return;
     }
+    const deviceId = await chooseCameraDeviceId(settings.profile.cameraDeviceId);
+    if (requestId !== cameraRequestId) return;
     const constraints = {
       audio: false,
       video: {
         width: { ideal: 720 },
         height: { ideal: 720 },
-        deviceId: settings.profile.cameraDeviceId ? { exact: settings.profile.cameraDeviceId } : undefined
+        deviceId: deviceId ? { exact: deviceId } : undefined
       }
     };
     const stream = await navigator.mediaDevices.getUserMedia(constraints);

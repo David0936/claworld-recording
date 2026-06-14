@@ -29,6 +29,25 @@ const fields = {
   clickThrough: $("clickThrough")
 };
 
+function isContinuityCamera(label = "") {
+  return /iphone|continuity|desk view|接续|连续互通|手机/i.test(label);
+}
+
+function isBuiltInCamera(label = "") {
+  return /facetime|built-?in|macbook|display camera|studio display|hd camera|内建|内置/i.test(label);
+}
+
+function preferredCamera(cameras, currentDeviceId) {
+  const current = cameras.find((device) => device.deviceId === currentDeviceId);
+  if (current && !isContinuityCamera(current.label)) {
+    return currentDeviceId;
+  }
+  const builtIn = cameras.find((device) => isBuiltInCamera(device.label) && !isContinuityCamera(device.label));
+  if (builtIn) return builtIn.deviceId;
+  const nonContinuity = cameras.find((device) => !isContinuityCamera(device.label));
+  return nonContinuity?.deviceId || cameras[0]?.deviceId || "";
+}
+
 function setInputValue(input, value) {
   if (input.type === "checkbox") {
     input.checked = Boolean(value);
@@ -135,12 +154,18 @@ async function refreshCameraDevices() {
     }
     const devices = await navigator.mediaDevices.enumerateDevices();
     const cameras = devices.filter((device) => device.kind === "videoinput");
-    select.innerHTML = `<option value="">默认摄像头</option>`;
+    select.innerHTML = `<option value="">自动：优先本机摄像头</option>`;
     for (const device of cameras) {
       const option = document.createElement("option");
       option.value = device.deviceId;
-      option.textContent = device.label || `摄像头 ${select.length}`;
+      const label = device.label || `摄像头 ${select.length}`;
+      const suffix = isContinuityCamera(label) ? " · iPhone" : isBuiltInCamera(label) ? " · 本机" : "";
+      option.textContent = `${label}${suffix}`;
       select.append(option);
+    }
+    const preferredDeviceId = preferredCamera(cameras, settings.profile.cameraDeviceId);
+    if (preferredDeviceId && preferredDeviceId !== settings.profile.cameraDeviceId) {
+      settings = await window.overlayApp.updateSettings({ profile: { cameraDeviceId: preferredDeviceId } });
     }
     setInputValue(select, settings.profile.cameraDeviceId);
   } catch {
