@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Profile Overlay</title>
+    <link rel="stylesheet" href="../styles/overlay.css" />
+  </head>
+  <body>
+    <section class="card record medium" id="card">
+      <div class="top-strip" id="topStrip">REC PROFILE</div>
+      <div class="content">
+        <div class="copy">
+          <p class="handle" id="handle"></p>
+          <h1 id="name"></h1>
+          <p class="headline" id="headline"></p>
+          <p class="bio" id="bio"></p>
+        </div>
+        <div class="avatar">
+          <video id="camera" autoplay playsinline muted></video>
+          <img id="avatarImage" alt="" />
+          <span id="initial"></span>
+        </div>
+      </div>
+      <div class="cta" id="cta"></div>
+    </section>
+    <script src="../renderer/overlay.js"></script>
+  </body>
+</html>

@@ -1,0 +1,231 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  user-select: none;
+}
+
+.card {
+  --accent: #00a38a;
+  --text: #f8fffb;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent), white 20%);
+  border-radius: 8px;
+  color: var(--text);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent), #062c27 72%), #063a36),
+    #073f38;
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.22);
+  -webkit-app-region: drag;
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.18), transparent 34%);
+}
+
+.top-strip {
+  display: none;
+  position: relative;
+  z-index: 1;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.card.clean .top-strip {
+  display: block;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 14px;
+  height: calc(100% - 56px);
+  padding: 18px 18px 8px;
+}
+
+.card.clean .content {
+  height: calc(100% - 94px);
+}
+
+.copy {
+  min-width: 0;
+}
+
+.handle,
+.headline,
+.bio,
+.cta {
+  margin: 0;
+}
+
+.handle {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--accent), white 74%);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+h1 {
+  overflow: hidden;
+  margin: 8px 0 4px;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headline {
+  color: #ffe8a3;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.bio {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 12px;
+  color: color-mix(in srgb, var(--text), transparent 12%);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-line;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.avatar {
+  position: relative;
+  display: grid;
+  width: 88px;
+  height: 88px;
+  place-items: center;
+  overflow: hidden;
+  border: 3px solid #ffe8a3;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.avatar video,
+.avatar img {
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar.show-camera video,
+.avatar.show-image img {
+  display: block;
+}
+
+.avatar span {
+  color: white;
+  font-size: 34px;
+  font-weight: 950;
+}
+
+.avatar.show-camera span,
+.avatar.show-image span {
+  display: none;
+}
+
+.avatar.mirror video {
+  transform: scaleX(-1);
+}
+
+.cta {
+  position: absolute;
+  z-index: 2;
+  right: 14px;
+  bottom: 14px;
+  left: 14px;
+  overflow: hidden;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #073f38;
+  background: #ffe8a3;
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card.small .content {
+  grid-template-columns: minmax(0, 1fr) 76px;
+  gap: 10px;
+  padding: 15px 15px 8px;
+}
+
+.card.small .avatar {
+  width: 72px;
+  height: 72px;
+}
+
+.card.small h1 {
+  font-size: 25px;
+}
+
+.card.small .bio {
+  -webkit-line-clamp: 3;
+  font-size: 11px;
+}
+
+.card.large .content {
+  grid-template-columns: minmax(0, 1fr) 112px;
+  padding: 22px 22px 10px;
+}
+
+.card.large .avatar {
+  width: 108px;
+  height: 108px;
+}
+
+.card.large h1 {
+  font-size: 36px;
+}
+
+.card.large .handle,
+.card.large .headline,
+.card.large .cta {
+  font-size: 14px;
+}
+
+.card.large .bio {
+  font-size: 13px;
+}
+
+.card.no-cta .cta {
+  display: none;
+}
+
+.card.no-cta .content {
+  height: 100%;
+}

@@ -1,0 +1,36 @@
+{
+  "name": "claworld-recording",
+  "version": "0.1.0",
+  "description": "Mac recording overlay for AI creator IP videos, with a visible profile card and protected teleprompter.",
+  "main": "src/main.js",
+  "author": "David",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer/control.js && node --check src/renderer/overlay.js && node --check src/renderer/prompter.js",
+    "pack": "electron-builder --dir",
+    "dist:mac": "electron-builder --mac"
+  },
+  "build": {
+    "appId": "com.david.aiiprecorderoverlay",
+    "productName": "Claworld Recording",
+    "mac": {
+      "category": "public.app-category.video",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": false
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^37.10.3",
+    "electron-builder": "^26.0.12"
+  }
+}

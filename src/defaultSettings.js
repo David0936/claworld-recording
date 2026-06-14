@@ -1,0 +1,55 @@
+const defaultSettings = {
+  profile: {
+    name: "David",
+    headline: "土木转 AI 产品经理",
+    handle: "AI 博主 IP / 项目开发记录",
+    bio: "记录我如何从土木转行 AI 产品经理\n分享真实项目开发、AI 工作流和踩坑复盘\n把想法一步步做成可用产品",
+    cta: "关注我，一起从 0 到 1 做项目",
+    avatarDataUrl: "",
+    useCamera: true,
+    cameraDeviceId: "",
+    mirrorCamera: true
+  },
+  overlay: {
+    visible: true,
+    alwaysOnTop: true,
+    locked: false,
+    size: "medium",
+    style: "record",
+    accentColor: "#00a38a",
+    textColor: "#f8fffb",
+    showCta: true,
+    bounds: {
+      width: 360,
+      height: 250
+    }
+  },
+  prompter: {
+    visible: true,
+    protectedFromCapture: true,
+    clickThrough: false,
+    running: false,
+    speed: 36,
+    fontSize: 34,
+    opacity: 0.84,
+    script: "开场：大家好，我是 David，一个从土木转行到 AI 产品经理的人。\n\n今天这条视频，我想分享一个真实项目开发过程：从一个模糊想法，到拆需求、搭原型、写代码、测试，再到最终发布。\n\n我会尽量讲人话，不堆术语。你会看到我怎么用 AI 当协作伙伴，而不是只把它当搜索框。\n\n如果你也想转 AI 产品、做自己的项目，或者打造个人 IP，可以先关注我。我们一起把想法做成作品。"
+  },
+  windows: {
+    control: {
+      width: 1040,
+      height: 760
+    },
+    overlay: {
+      x: null,
+      y: null
+    },
+    prompter: {
+      width: 840,
+      height: 260,
+      x: null,
+      y: null
+    }
+  }
+};
+
+module.exports = { defaultSettings };

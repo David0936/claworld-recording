@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI IP Recorder Overlay</title>
+    <link rel="stylesheet" href="../styles/control.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">AI IP Recorder Overlay</p>
+          <h1>录播悬浮助手</h1>
+        </div>
+        <div class="top-actions">
+          <button id="toggleOverlay" class="primary">显示名片</button>
+          <button id="togglePrompter">显示提词器</button>
+          <button id="resetPositions">重置位置</button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <aside class="preview-pane">
+          <div class="mini-card" id="miniCard">
+            <div class="mini-top" id="miniTop">REC PROFILE</div>
+            <div class="mini-content">
+              <div>
+                <p class="mini-handle" id="miniHandle">AI 博主 IP / 项目开发记录</p>
+                <h2 id="miniName">David</h2>
+                <p class="miniHeadline" id="miniHeadline">土木转 AI 产品经理</p>
+                <p class="miniBio" id="miniBio"></p>
+              </div>
+              <div class="mini-avatar">
+                <img id="miniAvatar" alt="" />
+                <span id="miniInitial">D</span>
+              </div>
+            </div>
+            <div class="mini-cta" id="miniCta">关注我，一起从 0 到 1 做项目</div>
+          </div>
+          <div class="window-status">
+            <span id="overlayStatus">名片已显示</span>
+            <span id="prompterStatus">提词器已显示</span>
+          </div>
+        </aside>
+
+        <section class="panel">
+          <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="profile">个人名片</button>
+            <button class="tab" data-tab="style">悬浮样式</button>
+            <button class="tab" data-tab="prompter">口播提词</button>
+          </div>
+
+          <form class="tab-panel active" id="profilePanel" data-panel="profile">
+            <div class="grid two">
+              <label>
+                昵称
+                <input id="name" type="text" />
+              </label>
+              <label>
+                个人定位
+                <input id="headline" type="text" />
+              </label>
+            </div>
+            <label>
+              小字标签
+              <input id="handle" type="text" />
+            </label>
+            <label>
+              简介
+              <textarea id="bio" rows="5"></textarea>
+            </label>
+            <label>
+              关注引导
+              <input id="cta" type="text" />
+            </label>
+            <div class="grid two">
+              <label class="toggle-line">
+                <input id="useCamera" type="checkbox" />
+                <span>使用摄像头</span>
+              </label>
+              <label class="toggle-line">
+                <input id="mirrorCamera" type="checkbox" />
+                <span>镜像摄像头</span>
+              </label>
+            </div>
+            <label>
+              摄像头
+              <select id="cameraDeviceId"></select>
+            </label>
+            <label>
+              头像图片
+              <input id="avatarInput" type="file" accept="image/*" />
+            </label>
+          </form>
+
+          <form class="tab-panel" id="stylePanel" data-panel="style">
+            <div class="grid two">
+              <label>
+                名片大小
+                <select id="size">
+                  <option value="small">小</option>
+                  <option value="medium">中</option>
+                  <option value="large">大</option>
+                </select>
+              </label>
+              <label>
+                显示模式
+                <select id="style">
+                  <option value="record">录课模式</option>
+                  <option value="clean">清晰模式</option>
+                </select>
+              </label>
+              <label>
+                主色
+                <input id="accentColor" type="color" />
+              </label>
+              <label>
+                文字色
+                <input id="textColor" type="color" />
+              </label>
+            </div>
+            <div class="grid two">
+              <label class="toggle-line">
+                <input id="overlayVisible" type="checkbox" />
+                <span>显示名片窗口</span>
+              </label>
+              <label class="toggle-line">
+                <input id="showCta" type="checkbox" />
+                <span>显示关注引导</span>
+              </label>
+              <label class="toggle-line">
+                <input id="alwaysOnTop" type="checkbox" />
+                <span>名片置顶</span>
+              </label>
+              <label class="toggle-line">
+                <input id="locked" type="checkbox" />
+                <span>锁定名片鼠标</span>
+              </label>
+            </div>
+          </form>
+
+          <form class="tab-panel" id="prompterPanel" data-panel="prompter">
+            <label>
+              提词稿
+              <textarea id="script" rows="10"></textarea>
+            </label>
+            <div class="grid two">
+              <label>
+                滚动速度
+                <input id="speed" type="range" min="8" max="120" step="1" />
+              </label>
+              <label>
+                字体大小
+                <input id="fontSize" type="range" min="22" max="64" step="1" />
+              </label>
+              <label>
+                透明度
+                <input id="opacity" type="range" min="0.35" max="1" step="0.01" />
+              </label>
+              <label class="toggle-line">
+                <input id="prompterVisible" type="checkbox" />
+                <span>显示提词器</span>
+              </label>
+              <label class="toggle-line">
+                <input id="protectedFromCapture" type="checkbox" />
+                <span>防录屏保护</span>
+              </label>
+              <label class="toggle-line">
+                <input id="clickThrough" type="checkbox" />
+                <span>提词器鼠标穿透</span>
+              </label>
+            </div>
+            <div class="prompt-actions">
+              <button id="playPrompter" type="button" class="primary">开始滚动</button>
+              <button id="pausePrompter" type="button">暂停</button>
+              <button id="resetPrompter" type="button">回到开头</button>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+    <script src="../renderer/control.js"></script>
+  </body>
+</html>
