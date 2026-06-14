@@ -101,7 +101,7 @@ function createControlWindow() {
       height,
       minWidth: 880,
       minHeight: 660,
-      title: "AI IP Recorder Overlay",
+      title: "ClawCast Studio",
       trafficLightPosition: { x: 16, y: 18 },
       titleBarStyle: "hiddenInset",
       vibrancy: "sidebar",
@@ -135,7 +135,7 @@ function createOverlayWindow() {
       hasShadow: false,
       skipTaskbar: true,
       focusable: true,
-      title: "AI Profile Overlay"
+      title: "ClawCast Profile Card"
     })
   );
 
@@ -168,7 +168,7 @@ function createPrompterWindow() {
       hasShadow: false,
       skipTaskbar: true,
       focusable: true,
-      title: "Protected Teleprompter"
+      title: "ClawCast Protected Prompter"
     })
   );
 

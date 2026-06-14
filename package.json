@@ -1,7 +1,7 @@
 {
-  "name": "claworld-recording",
+  "name": "clawcast-studio",
   "version": "0.1.0",
-  "description": "Mac recording overlay for AI creator IP videos, with a visible profile card and protected teleprompter.",
+  "description": "Claworld branded Mac recording cockpit for AI creator videos, with a visible profile card and protected teleprompter.",
   "main": "src/main.js",
   "author": "David",
   "license": "UNLICENSED",
@@ -14,8 +14,8 @@
     "dist:mac": "electron-builder --mac"
   },
   "build": {
-    "appId": "com.david.aiiprecorderoverlay",
-    "productName": "Claworld Recording",
+    "appId": "com.claworld.clawcaststudio",
+    "productName": "ClawCast Studio",
     "mac": {
       "category": "public.app-category.video",
       "target": [

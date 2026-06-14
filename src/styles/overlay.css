@@ -10,63 +10,79 @@ body {
   overflow: hidden;
   background: transparent;
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
   user-select: none;
 }
 
 .card {
-  --accent: #00a38a;
-  --text: #f8fffb;
+  --accent: #f51d2a;
+  --text: #fff8ef;
+  position: relative;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--accent), white 20%);
+  border: 1px solid rgba(255, 248, 239, 0.14);
   border-radius: 8px;
   color: var(--text);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent), #062c27 72%), #063a36),
-    #073f38;
-  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.22);
+    linear-gradient(135deg, color-mix(in srgb, var(--accent), transparent 74%), transparent 42%),
+    #090706;
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.24);
   -webkit-app-region: drag;
 }
 
-.card::after {
+.card::before {
   content: "";
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  background: linear-gradient(115deg, rgba(255, 255, 255, 0.18), transparent 34%);
+  inset: 0 auto 0 0;
+  width: 7px;
+  background: var(--accent);
+}
+
+.card.clean {
+  color: #080808;
+  border-color: rgba(8, 8, 8, 0.1);
+  background: #fff8ef;
 }
 
 .top-strip {
   display: none;
   position: relative;
-  z-index: 1;
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-  color: rgba(255, 255, 255, 0.82);
+  z-index: 2;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 9px 18px;
+  border-bottom: 1px solid rgba(255, 248, 239, 0.13);
+  color: rgba(255, 248, 239, 0.78);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 950;
+}
+
+.top-strip img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .card.clean .top-strip {
-  display: block;
+  color: #080808;
+  border-bottom-color: rgba(8, 8, 8, 0.1);
+}
+
+.card.clean .top-strip,
+.card.record .top-strip {
+  display: flex;
 }
 
 .content {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 92px;
   gap: 14px;
-  height: calc(100% - 56px);
-  padding: 18px 18px 8px;
-}
-
-.card.clean .content {
-  height: calc(100% - 94px);
+  height: calc(100% - 96px);
+  padding: 18px 18px 8px 22px;
 }
 
 .copy {
@@ -82,41 +98,54 @@ body {
 
 .handle {
   overflow: hidden;
-  color: color-mix(in srgb, var(--accent), white 74%);
+  color: #ffb3a8;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 950;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.card.clean .handle {
+  color: #8b1118;
+}
+
 h1 {
   overflow: hidden;
-  margin: 8px 0 4px;
-  font-size: 30px;
-  line-height: 1.05;
+  margin: 8px 0 5px;
+  font-family: "Arial Black", Impact, ui-sans-serif, system-ui, sans-serif;
+  font-size: 31px;
+  line-height: 1;
   letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .headline {
-  color: #ffe8a3;
+  color: #ffe0cf;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 950;
   line-height: 1.25;
+}
+
+.card.clean .headline {
+  color: var(--accent);
 }
 
 .bio {
   display: -webkit-box;
   overflow: hidden;
   margin-top: 12px;
-  color: color-mix(in srgb, var(--text), transparent 12%);
+  color: color-mix(in srgb, var(--text), transparent 14%);
   font-size: 12px;
   line-height: 1.55;
   white-space: pre-line;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
+}
+
+.card.clean .bio {
+  color: #6d625d;
 }
 
 .avatar {
@@ -126,9 +155,9 @@ h1 {
   height: 88px;
   place-items: center;
   overflow: hidden;
-  border: 3px solid #ffe8a3;
+  border: 3px solid var(--accent);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 248, 239, 0.12);
 }
 
 .avatar video,
@@ -145,9 +174,13 @@ h1 {
 }
 
 .avatar span {
-  color: white;
+  color: var(--text);
   font-size: 34px;
   font-weight: 950;
+}
+
+.card.clean .avatar span {
+  color: var(--accent);
 }
 
 .avatar.show-camera span,
@@ -159,17 +192,36 @@ h1 {
   transform: scaleX(-1);
 }
 
+.brand-mark {
+  position: absolute;
+  right: 13px;
+  bottom: 54px;
+  z-index: 1;
+  width: 78px;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.brand-mark img {
+  display: block;
+  width: 100%;
+}
+
+.card.clean .brand-mark {
+  opacity: 0.16;
+}
+
 .cta {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   right: 14px;
   bottom: 14px;
-  left: 14px;
+  left: 18px;
   overflow: hidden;
   padding: 10px 12px;
   border-radius: 8px;
-  color: #073f38;
-  background: #ffe8a3;
+  color: #fff8ef;
+  background: var(--accent);
   font-size: 12px;
   font-weight: 950;
   line-height: 1.2;
@@ -181,7 +233,8 @@ h1 {
 .card.small .content {
   grid-template-columns: minmax(0, 1fr) 76px;
   gap: 10px;
-  padding: 15px 15px 8px;
+  height: calc(100% - 90px);
+  padding: 15px 15px 8px 20px;
 }
 
 .card.small .avatar {
@@ -200,7 +253,7 @@ h1 {
 
 .card.large .content {
   grid-template-columns: minmax(0, 1fr) 112px;
-  padding: 22px 22px 10px;
+  padding: 22px 22px 10px 26px;
 }
 
 .card.large .avatar {
@@ -227,5 +280,5 @@ h1 {
 }
 
 .card.no-cta .content {
-  height: 100%;
+  height: calc(100% - 42px);
 }

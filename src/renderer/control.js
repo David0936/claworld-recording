@@ -98,7 +98,12 @@ function renderPreview() {
   const initial = (settings.profile.name || "D").trim().slice(0, 1).toUpperCase();
 
   miniCard.classList.toggle("clean", settings.overlay.style === "clean");
-  miniCard.style.background = `linear-gradient(145deg, color-mix(in srgb, ${settings.overlay.accentColor}, #062c27 72%), #073f38)`;
+  miniCard.style.setProperty("--preview-accent", settings.overlay.accentColor);
+  if (settings.overlay.style === "clean") {
+    miniCard.style.background = "";
+  } else {
+    miniCard.style.background = `linear-gradient(135deg, color-mix(in srgb, ${settings.overlay.accentColor}, transparent 78%), transparent 38%), #0c0908`;
+  }
   $("miniHandle").textContent = settings.profile.handle;
   $("miniName").textContent = settings.profile.name;
   $("miniHeadline").textContent = settings.profile.headline;
@@ -106,8 +111,10 @@ function renderPreview() {
   $("miniCta").textContent = settings.profile.cta;
   $("miniCta").style.display = settings.overlay.showCta ? "block" : "none";
   $("miniInitial").textContent = initial;
-  $("overlayStatus").textContent = settings.overlay.visible ? "名片已显示" : "名片已隐藏";
-  $("prompterStatus").textContent = settings.prompter.visible ? "提词器已显示" : "提词器已隐藏";
+  $("overlayStatus").textContent = settings.overlay.visible ? "录屏名片 · 已显示" : "录屏名片 · 已隐藏";
+  $("prompterStatus").textContent = settings.prompter.visible ? "防录屏提词器 · 已显示" : "防录屏提词器 · 已隐藏";
+  $("toggleOverlay").textContent = settings.overlay.visible ? "隐藏名片" : "显示名片";
+  $("togglePrompter").textContent = settings.prompter.visible ? "隐藏提词器" : "显示提词器";
 
   if (settings.profile.avatarDataUrl) {
     miniAvatar.src = settings.profile.avatarDataUrl;

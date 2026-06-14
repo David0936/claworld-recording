@@ -2,9 +2,9 @@ const defaultSettings = {
   profile: {
     name: "David",
     headline: "土木转 AI 产品经理",
-    handle: "AI 博主 IP / 项目开发记录",
-    bio: "记录我如何从土木转行 AI 产品经理\n分享真实项目开发、AI 工作流和踩坑复盘\n把想法一步步做成可用产品",
-    cta: "关注我，一起从 0 到 1 做项目",
+    handle: "ClawCast Studio / AI 项目开发记录",
+    bio: "从土木转行 AI 产品经理\n记录真实项目开发、AI 工作流和踩坑复盘\n把想法一步步做成可用产品",
+    cta: "关注我，一起把想法做成作品",
     avatarDataUrl: "",
     useCamera: true,
     cameraDeviceId: "",
@@ -16,8 +16,8 @@ const defaultSettings = {
     locked: false,
     size: "medium",
     style: "record",
-    accentColor: "#00a38a",
-    textColor: "#f8fffb",
+    accentColor: "#f51d2a",
+    textColor: "#fff8ef",
     showCta: true,
     bounds: {
       width: 360,

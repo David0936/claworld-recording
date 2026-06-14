@@ -1,4 +1,6 @@
-# Claworld Recording
+# ClawCast Studio
+
+**爪播**，Claworld 品牌下的 Mac 录播控制台。
 
 面向 AI 博主和录播课创作者的 Mac 悬浮录屏助手。它把“能进入录屏画面的个人 IP 名片”和“尽量不会被录进去的口播提词器”拆成两个独立悬浮窗口，让录项目开发、转行经验、AI 产品经理成长记录时更像一个轻量录播工作台。
 
@@ -16,7 +18,18 @@
 
 ## 默认 IP 方向
 
-当前默认文案围绕 “从土木转行 AI 产品经理” 和 “分享真实项目开发过程” 设计，适合继续迭代成你的 AI 博主 IP 录播工具。
+当前默认文案围绕 “从土木转行 AI 产品经理” 和 “分享真实项目开发过程” 设计，适合继续迭代成你的 AI 博主 IP 录播工具。视觉系统已接入 Claworld 的红色爪标和横版 logo。
+
+## 品牌资产
+
+项目内已固化一份轻量品牌规范：[brand-spec.md](brand-spec.md)。
+
+实际使用的素材：
+
+- `src/assets/branding/claw-icon-v2.png`
+- `src/assets/branding/claw-icon.png`
+- `src/assets/branding/logo-dark.png`
+- `src/assets/branding/logo-light.png`
 
 ## 运行
 
