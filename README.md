@@ -28,10 +28,12 @@
 
 实际使用的素材：
 
+- `src/assets/branding/app-logo.png`
+- `src/assets/branding/app-logo.icns`
+- `src/assets/branding/logo-light.png`
+- `src/assets/branding/logo-dark.png`
 - `src/assets/branding/claw-icon-v2.png`
 - `src/assets/branding/claw-icon.png`
-- `src/assets/branding/logo-dark.png`
-- `src/assets/branding/logo-light.png`
 
 ## 运行
 

@@ -16,6 +16,7 @@
   "build": {
     "appId": "com.claworld.clawcaststudio",
     "productName": "ClawCast Studio",
+    "icon": "src/assets/branding/app-logo.icns",
     "mac": {
       "category": "public.app-category.video",
       "target": [

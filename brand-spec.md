@@ -1,15 +1,16 @@
 # Claworld · Brand Spec
 > Collected: 2026-06-14
-> Source: `/Users/david/Documents/23 claworld-branding/branding`
+> Source: `/Users/david/Documents/22 录播课插件/爪播branding`
 > Product using the system: ClawCast Studio
 
 ## Core Assets
 
 ### Logo
-- Dark wordmark: `src/assets/branding/logo-dark.png`
-- Light mark strip: `src/assets/branding/logo-light.png`
-- Icon: `src/assets/branding/claw-icon-v2.png`
-- Backup icon: `src/assets/branding/claw-icon.png`
+- App logo / macOS icon: `src/assets/branding/app-logo.png`
+- macOS packaged icon: `src/assets/branding/app-logo.icns`
+- Light theme horizontal logo: `src/assets/branding/logo-light.png`
+- Dark theme horizontal logo: `src/assets/branding/logo-dark.png`
+- Legacy small icon aliases: `src/assets/branding/claw-icon-v2.png`, `src/assets/branding/claw-icon.png`
 
 Use the real PNG assets directly. Do not redraw the claw mark with CSS or SVG.
 

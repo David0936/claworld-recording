@@ -261,6 +261,7 @@ function windowOptions(extra = {}) {
   return {
     show: false,
     backgroundColor: "#00000000",
+    icon: path.join(__dirname, "assets/branding/app-logo.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -579,6 +580,9 @@ function registerShortcuts() {
 
 app.whenReady().then(() => {
   loadSettings();
+  if (process.platform === "darwin" && app.dock) {
+    app.dock.setIcon(path.join(__dirname, "assets/branding/app-logo.png"));
+  }
   registerIpc();
   session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
     callback(["media", "camera", "microphone", "display-capture"].includes(permission));
