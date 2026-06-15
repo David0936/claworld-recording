@@ -238,7 +238,7 @@ function recordingModeLabel(mode) {
 function permissionCopy(status) {
   if (status === "granted") return ["已授权", "granted"];
   if (status === "denied" || status === "restricted") return ["未授权", "blocked"];
-  if (status === "not-determined") return ["待授权", "unknown"];
+  if (status === "not-determined") return ["需实测", "unknown"];
   return ["未知", "unknown"];
 }
 
@@ -292,21 +292,16 @@ function visibleRecordingSources(mode = fields.recordingMode.value) {
   return recordingSources.filter((source) => source.type === type);
 }
 
-function screenAccessNeedsManualGrant(status) {
-  return ["denied", "restricted", "not-determined"].includes(status);
-}
-
-function showScreenPermissionRequired(openSettings = false) {
+function showScreenPermissionRequired() {
   recordingSources = [];
-  fields.recordingSourceId.innerHTML = `<option value="">录屏权限未开启</option>`;
+  fields.recordingSourceId.innerHTML = `<option value="">录屏来源不可用</option>`;
   renderSourcePicker();
   setRecordingStatus(
-    "需要开启录屏权限",
-    "在系统设置 > 隐私与安全性 > 屏幕与系统音频录制里勾选“爪播”，然后退出并重新打开 App。",
+    "暂时读取不到录屏来源",
+    "如果系统开关已经打开，请点“授权后重启 App”。如果仍不行，再打开录屏权限设置确认“爪播”和 Electron 都已允许。",
     "error"
   );
   renderRecordingControls();
-  if (openSettings) window.overlayApp.openScreenPrivacy();
 }
 
 function renderRecordingSources() {
@@ -422,29 +417,26 @@ function renderRecordingControls() {
   fields.includeMic.disabled = isRecording;
 }
 
-async function refreshRecordingSources(options = {}) {
+async function refreshRecordingSources() {
   fields.recordingSourceId.innerHTML = `<option value="">正在读取屏幕和窗口...</option>`;
   try {
-    const { screenAccess: access } = await refreshPermissionState();
-    if (screenAccessNeedsManualGrant(access)) {
-      showScreenPermissionRequired(Boolean(options.openSettings));
-      return;
-    }
+    await refreshPermissionState();
     recordingSources = await window.overlayApp.getRecordingSources();
     if (!recordingSources.length) {
-      showScreenPermissionRequired(false);
+      showScreenPermissionRequired();
       return;
     }
+    setPermissionCard("screenPermissionCard", "screenPermissionText", "granted");
+    setRecordingStatus("已读取录屏来源", "选择一个屏幕或窗口后即可开始录制。", "idle");
     renderRecordingSources();
   } catch (error) {
     console.error("Failed to load recording sources", error);
-    fields.recordingSourceId.innerHTML = `<option value="">读取失败，请检查录屏权限</option>`;
+    fields.recordingSourceId.innerHTML = `<option value="">读取失败，请重启 App</option>`;
     setRecordingStatus(
       "读取录屏来源失败",
-      "请在系统设置里允许“爪播”录制屏幕；授权后需要退出并重新打开 App。",
+      "系统权限可能刚更新但 App 还没刷新。请点“授权后重启 App”；如果仍失败，再检查系统录屏权限。",
       "error"
     );
-    if (options.openSettings) window.overlayApp.openScreenPrivacy();
   }
 }
 
@@ -472,7 +464,7 @@ async function chooseFirstRecordingSource(mode) {
     sourceName: "",
     region: mode === "region" ? settings.recording.region : null
   });
-  await refreshRecordingSources({ openSettings: true });
+  await refreshRecordingSources();
   const sources = visibleRecordingSources(mode);
   if (!sources.length) return null;
   fields.recordingSourceId.value = sources[0].id;
@@ -486,7 +478,7 @@ async function quickRecordScreen() {
   setRecordingStatus("准备快速录屏", "正在选择当前屏幕。", "saving");
   const source = await chooseFirstRecordingSource("screen");
   if (!source) {
-    showScreenPermissionRequired(true);
+    showScreenPermissionRequired();
     return;
   }
   await startRecording();
@@ -498,8 +490,7 @@ async function quickSelectWindow() {
   setRecordingStatus("准备选择窗口", "正在读取当前可录制窗口。", "saving");
   const source = await chooseFirstRecordingSource("window");
   if (!source) {
-    setRecordingStatus("未发现可录窗口", "先打开要录制的软件；如果下拉框仍然读取失败，就去系统设置勾选“爪播”录屏权限。", "error");
-    window.overlayApp.openScreenPrivacy();
+    setRecordingStatus("未发现可录窗口", "先打开要录制的软件；如果系统开关已打开但仍读取失败，请点“授权后重启 App”。", "error");
     return;
   }
   setRecordingStatus("已切到窗口录制", `当前选择：${source.name}。可在下拉框切换其它窗口。`, "idle");
@@ -683,7 +674,7 @@ async function saveCurrentRecording(mimeType) {
 function recordingErrorCopy(error) {
   const name = error?.name || String(error || "");
   if (name === "NotAllowedError" || name === "SecurityError") {
-    return ["录屏权限被拒绝", "去系统设置开启屏幕录制权限，或允许麦克风权限。"];
+    return ["录屏权限被系统拒绝", "如果系统开关已经打开，请点“授权后重启 App”。仍失败时，在系统设置里移除爪播/Electron 后重新添加。"];
   }
   if (name === "NotReadableError") {
     return ["无法读取录制来源", "目标窗口可能关闭了，刷新后重选。"];
@@ -854,7 +845,7 @@ function setupBindings() {
   $("quickRecordInPanel").addEventListener("click", quickRecordScreen);
   $("quickSelectWindow").addEventListener("click", quickSelectWindow);
   $("quickSelectWindowInPanel").addEventListener("click", quickSelectWindow);
-  $("refreshRecordingSources").addEventListener("click", () => refreshRecordingSources({ openSettings: true }));
+  $("refreshRecordingSources").addEventListener("click", refreshRecordingSources);
   $("openScreenPrivacy").addEventListener("click", () => window.overlayApp.openScreenPrivacy());
   $("selectRecordingRegion").addEventListener("click", selectRecordingRegion);
   $("startRecording").addEventListener("click", startRecording);
