@@ -11,6 +11,8 @@ let activeMicStream;
 let activeCanvasStream;
 let activeRegionVideo;
 let activeDrawFrame;
+let activeCursorPoll;
+let latestCursorPosition = null;
 let recordingStartedAt = 0;
 let recordingTimer;
 let lastRecordingPath = "";
@@ -32,6 +34,7 @@ const fields = {
   accentColor: $("accentColor"),
   textColor: $("textColor"),
   overlayVisible: $("overlayVisible"),
+  overlayProtectedFromCapture: $("overlayProtectedFromCapture"),
   showCta: $("showCta"),
   alwaysOnTop: $("alwaysOnTop"),
   locked: $("locked"),
@@ -45,7 +48,10 @@ const fields = {
   recordingMode: $("recordingMode"),
   recordingFrameRate: $("recordingFrameRate"),
   recordingSourceId: $("recordingSourceId"),
-  includeMic: $("includeMic")
+  includeMic: $("includeMic"),
+  magnifierEnabled: $("magnifierEnabled"),
+  magnifierZoom: $("magnifierZoom"),
+  magnifierSize: $("magnifierSize")
 };
 
 function isContinuityCamera(label = "") {
@@ -122,6 +128,7 @@ function syncForm(next) {
   setInputValue(fields.accentColor, settings.overlay.accentColor);
   setInputValue(fields.textColor, settings.overlay.textColor);
   setInputValue(fields.overlayVisible, settings.overlay.visible);
+  setInputValue(fields.overlayProtectedFromCapture, settings.overlay.protectedFromCapture);
   setInputValue(fields.showCta, settings.overlay.showCta);
   setInputValue(fields.alwaysOnTop, settings.overlay.alwaysOnTop);
   setInputValue(fields.locked, settings.overlay.locked);
@@ -136,6 +143,9 @@ function syncForm(next) {
   setInputValue(fields.recordingFrameRate, settings.recording.frameRate);
   setInputValue(fields.recordingSourceId, settings.recording.sourceId);
   setInputValue(fields.includeMic, settings.recording.includeMic);
+  setInputValue(fields.magnifierEnabled, settings.recording.magnifierEnabled);
+  setInputValue(fields.magnifierZoom, settings.recording.magnifierZoom);
+  setInputValue(fields.magnifierSize, settings.recording.magnifierSize);
   renderPreview();
   renderRecordingControls();
   renderSourcePicker();
@@ -182,8 +192,12 @@ function renderPreview() {
   $("miniCta").textContent = settings.profile.cta;
   $("miniCta").style.display = settings.overlay.showCta ? "block" : "none";
   $("miniInitial").textContent = initial;
-  $("overlayStatus").textContent = settings.overlay.visible ? "录屏名片 · 已显示" : "录屏名片 · 已隐藏";
-  $("prompterStatus").textContent = settings.prompter.visible ? "防录屏提词器 · 已显示" : "防录屏提词器 · 已隐藏";
+  $("overlayStatus").textContent = `${settings.overlay.visible ? "录屏名片 · 已显示" : "录屏名片 · 已隐藏"} · ${
+    settings.overlay.protectedFromCapture ? "隐身" : "入镜"
+  }`;
+  $("prompterStatus").textContent = `${settings.prompter.visible ? "防录屏提词器 · 已显示" : "防录屏提词器 · 已隐藏"} · ${
+    settings.prompter.protectedFromCapture ? "隐身" : "入镜"
+  }`;
   $("toggleOverlay").textContent = settings.overlay.visible ? "隐藏名片" : "显示名片";
   $("togglePrompter").textContent = settings.prompter.visible ? "隐藏提词器" : "显示提词器";
 
@@ -415,6 +429,9 @@ function renderRecordingControls() {
   fields.recordingFrameRate.disabled = isRecording;
   fields.recordingSourceId.disabled = isRecording;
   fields.includeMic.disabled = isRecording;
+  fields.magnifierEnabled.disabled = isRecording;
+  fields.magnifierZoom.disabled = isRecording || !fields.magnifierEnabled.checked;
+  fields.magnifierSize.disabled = isRecording || !fields.magnifierEnabled.checked;
 }
 
 async function refreshRecordingSources() {
@@ -526,6 +543,14 @@ async function updateIncludeMic() {
   await updateRecordingSettings({ includeMic: fields.includeMic.checked });
 }
 
+async function updateRecordingEffects() {
+  await updateRecordingSettings({
+    magnifierEnabled: fields.magnifierEnabled.checked,
+    magnifierZoom: Number(fields.magnifierZoom.value),
+    magnifierSize: Number(fields.magnifierSize.value)
+  });
+}
+
 async function selectRecordingRegion() {
   const source = selectedRecordingSource();
   if (!source) {
@@ -560,7 +585,128 @@ async function getDesktopStream(sourceId, frameRate) {
   });
 }
 
-async function createRegionStream(displayStream, region, frameRate) {
+function stopCursorPolling() {
+  clearInterval(activeCursorPoll);
+  activeCursorPoll = null;
+  latestCursorPosition = null;
+}
+
+function startCursorPolling() {
+  stopCursorPolling();
+  activeCursorPoll = setInterval(async () => {
+    try {
+      latestCursorPosition = await window.overlayApp.getCursorPosition();
+    } catch {
+      latestCursorPosition = null;
+    }
+  }, 33);
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function capturePlanFor(video, source, mode, region) {
+  if (mode === "region" && region) {
+    const scaleX = video.videoWidth / region.displayWidth;
+    const scaleY = video.videoHeight / region.displayHeight;
+    const sourceX = Math.max(0, Math.round(region.x * scaleX));
+    const sourceY = Math.max(0, Math.round(region.y * scaleY));
+    const sourceWidth = Math.min(video.videoWidth - sourceX, Math.max(2, Math.round(region.width * scaleX)));
+    const sourceHeight = Math.min(video.videoHeight - sourceY, Math.max(2, Math.round(region.height * scaleY)));
+    return {
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      canvasWidth: sourceWidth,
+      canvasHeight: sourceHeight,
+      displayId: String(region.displayId || source?.displayId || ""),
+      displayX: region.displayX || 0,
+      displayY: region.displayY || 0,
+      displayWidth: region.displayWidth,
+      displayHeight: region.displayHeight,
+      scaleX,
+      scaleY
+    };
+  }
+
+  const bounds = source?.displayBounds?.bounds;
+  return {
+    sourceX: 0,
+    sourceY: 0,
+    sourceWidth: video.videoWidth,
+    sourceHeight: video.videoHeight,
+    canvasWidth: video.videoWidth,
+    canvasHeight: video.videoHeight,
+    displayId: String(source?.displayId || source?.displayBounds?.id || ""),
+    displayX: bounds?.x || 0,
+    displayY: bounds?.y || 0,
+    displayWidth: bounds?.width || video.videoWidth,
+    displayHeight: bounds?.height || video.videoHeight,
+    scaleX: bounds?.width ? video.videoWidth / bounds.width : 1,
+    scaleY: bounds?.height ? video.videoHeight / bounds.height : 1
+  };
+}
+
+function drawMagnifier(context, video, plan, source) {
+  const cursor = latestCursorPosition;
+  const magnifier = settings.recording;
+  if (!cursor || source?.type !== "screen") return;
+  if (plan.displayId && cursor.displayId && String(plan.displayId) !== String(cursor.displayId)) return;
+
+  const rawCursorX = (cursor.x - plan.displayX) * plan.scaleX;
+  const rawCursorY = (cursor.y - plan.displayY) * plan.scaleY;
+  const centerX = rawCursorX - plan.sourceX;
+  const centerY = rawCursorY - plan.sourceY;
+  if (centerX < 0 || centerY < 0 || centerX > plan.canvasWidth || centerY > plan.canvasHeight) return;
+
+  const diameter = Math.max(120, Math.min(320, Number(magnifier.magnifierSize) || 190));
+  const radius = diameter / 2;
+  const zoom = Math.max(1.2, Math.min(4, Number(magnifier.magnifierZoom) || 2));
+  const sampleWidth = diameter / zoom;
+  const sampleHeight = diameter / zoom;
+  const sampleX = clamp(plan.sourceX + centerX - sampleWidth / 2, 0, video.videoWidth - sampleWidth);
+  const sampleY = clamp(plan.sourceY + centerY - sampleHeight / 2, 0, video.videoHeight - sampleHeight);
+  const destX = centerX - radius;
+  const destY = centerY - radius;
+
+  context.save();
+  context.shadowColor = "rgba(0, 0, 0, 0.26)";
+  context.shadowBlur = 18;
+  context.shadowOffsetY = 6;
+  context.beginPath();
+  context.arc(centerX, centerY, radius + 3, 0, Math.PI * 2);
+  context.fillStyle = "rgba(8, 8, 8, 0.22)";
+  context.fill();
+  context.restore();
+
+  context.save();
+  context.beginPath();
+  context.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  context.clip();
+  context.drawImage(video, sampleX, sampleY, sampleWidth, sampleHeight, destX, destY, diameter, diameter);
+  const glow = context.createRadialGradient(centerX - radius * 0.35, centerY - radius * 0.35, radius * 0.1, centerX, centerY, radius);
+  glow.addColorStop(0, "rgba(255, 255, 255, 0.22)");
+  glow.addColorStop(0.58, "rgba(255, 255, 255, 0)");
+  glow.addColorStop(1, "rgba(0, 0, 0, 0.22)");
+  context.fillStyle = glow;
+  context.fillRect(destX, destY, diameter, diameter);
+  context.restore();
+
+  context.save();
+  context.beginPath();
+  context.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  context.lineWidth = 5;
+  context.strokeStyle = settings.overlay.accentColor || "#f51d2a";
+  context.stroke();
+  context.lineWidth = 2;
+  context.strokeStyle = "rgba(255, 255, 255, 0.72)";
+  context.stroke();
+  context.restore();
+}
+
+async function createCompositedStream(displayStream, source, mode, region, frameRate) {
   const video = document.createElement("video");
   video.srcObject = displayStream;
   video.muted = true;
@@ -570,20 +716,28 @@ async function createRegionStream(displayStream, region, frameRate) {
   });
   await video.play();
 
-  const scaleX = video.videoWidth / region.displayWidth;
-  const scaleY = video.videoHeight / region.displayHeight;
-  const sourceX = Math.max(0, Math.round(region.x * scaleX));
-  const sourceY = Math.max(0, Math.round(region.y * scaleY));
-  const sourceWidth = Math.max(2, Math.round(region.width * scaleX));
-  const sourceHeight = Math.max(2, Math.round(region.height * scaleY));
+  const plan = capturePlanFor(video, source, mode, region);
+  const shouldMagnify = Boolean(settings.recording.magnifierEnabled && source?.type === "screen");
+  if (shouldMagnify) startCursorPolling();
 
   const canvas = document.createElement("canvas");
-  canvas.width = sourceWidth;
-  canvas.height = sourceHeight;
+  canvas.width = plan.canvasWidth;
+  canvas.height = plan.canvasHeight;
   const context = canvas.getContext("2d");
 
   function draw() {
-    context.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
+    context.drawImage(
+      video,
+      plan.sourceX,
+      plan.sourceY,
+      plan.sourceWidth,
+      plan.sourceHeight,
+      0,
+      0,
+      plan.canvasWidth,
+      plan.canvasHeight
+    );
+    if (shouldMagnify) drawMagnifier(context, video, plan, source);
     activeDrawFrame = requestAnimationFrame(draw);
   }
 
@@ -593,9 +747,13 @@ async function createRegionStream(displayStream, region, frameRate) {
   return activeCanvasStream;
 }
 
-async function createRecordingStream(sourceId, mode, region, includeMic, frameRate) {
+async function createRecordingStream(source, mode, region, includeMic, frameRate) {
+  const sourceId = source.id;
   activeDisplayStream = await getDesktopStream(sourceId, frameRate);
-  const videoStream = mode === "region" ? await createRegionStream(activeDisplayStream, region, frameRate) : activeDisplayStream;
+  const shouldComposite = mode === "region" || Boolean(settings.recording.magnifierEnabled && source.type === "screen");
+  const videoStream = shouldComposite
+    ? await createCompositedStream(activeDisplayStream, source, mode, region, frameRate)
+    : activeDisplayStream;
   const tracks = [...videoStream.getVideoTracks()];
 
   if (includeMic) {
@@ -614,6 +772,7 @@ async function createRecordingStream(sourceId, mode, region, includeMic, frameRa
 }
 
 function cleanupRecordingStreams() {
+  stopCursorPolling();
   if (activeDrawFrame) {
     cancelAnimationFrame(activeDrawFrame);
     activeDrawFrame = null;
@@ -708,7 +867,7 @@ async function startRecording() {
 
   setRecordingStatus("正在请求录屏权限", "如果系统弹窗出现，请允许屏幕录制。", "saving");
   try {
-    const stream = await createRecordingStream(source.id, mode, region, includeMic, frameRate);
+    const stream = await createRecordingStream(source, mode, region, includeMic, frameRate);
     recordedChunks = [];
     const mimeType = preferredMimeType();
     mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
@@ -818,6 +977,7 @@ function setupBindings() {
   bindInput(fields.accentColor, ["overlay", "accentColor"]);
   bindInput(fields.textColor, ["overlay", "textColor"]);
   bindInput(fields.overlayVisible, ["overlay", "visible"]);
+  bindInput(fields.overlayProtectedFromCapture, ["overlay", "protectedFromCapture"]);
   bindInput(fields.showCta, ["overlay", "showCta"]);
   bindInput(fields.alwaysOnTop, ["overlay", "alwaysOnTop"]);
   bindInput(fields.locked, ["overlay", "locked"]);
@@ -832,6 +992,9 @@ function setupBindings() {
   fields.recordingSourceId.addEventListener("change", updateRecordingSource);
   fields.recordingFrameRate.addEventListener("change", updateRecordingFrameRate);
   fields.includeMic.addEventListener("change", updateIncludeMic);
+  fields.magnifierEnabled.addEventListener("change", updateRecordingEffects);
+  fields.magnifierZoom.addEventListener("change", updateRecordingEffects);
+  fields.magnifierSize.addEventListener("change", updateRecordingEffects);
 
   $("toggleOverlay").addEventListener("click", async () => syncForm(await window.overlayApp.toggleOverlay()));
   $("togglePrompter").addEventListener("click", async () => syncForm(await window.overlayApp.togglePrompter()));
@@ -839,6 +1002,7 @@ function setupBindings() {
   $("checkUpdate").addEventListener("click", () => refreshUpdateStatus(true));
   $("runUpdate").addEventListener("click", runAppUpdate);
   $("restartApp").addEventListener("click", () => window.overlayApp.restartApp());
+  $("quitApp").addEventListener("click", () => window.overlayApp.quitApp());
   $("restartAfterPermission").addEventListener("click", () => window.overlayApp.restartApp());
   $("refreshPermissions").addEventListener("click", refreshPermissionState);
   $("quickRecord").addEventListener("click", quickRecordScreen);

@@ -26,6 +26,7 @@
             <button id="checkUpdate">检查更新</button>
             <button id="runUpdate">一键更新</button>
             <button id="restartApp" disabled>重启应用</button>
+            <button id="quitApp" class="danger" type="button">退出爪播</button>
           </div>
           <p class="update-status" id="updateStatus">GitHub 同步：未检查</p>
         </div>
@@ -152,6 +153,10 @@
                 <span>显示名片窗口</span>
               </label>
               <label class="toggle-line">
+                <input id="overlayProtectedFromCapture" type="checkbox" />
+                <span>名片隐身（不进录屏）</span>
+              </label>
+              <label class="toggle-line">
                 <input id="showCta" type="checkbox" />
                 <span>显示关注引导</span>
               </label>
@@ -225,6 +230,29 @@
               <input id="includeMic" type="checkbox" />
               <span>同时录麦克风</span>
             </label>
+            <div class="recording-effect-panel">
+              <label class="toggle-line">
+                <input id="magnifierEnabled" type="checkbox" />
+                <span>鼠标局部放大</span>
+              </label>
+              <label>
+                放大倍数
+                <select id="magnifierZoom">
+                  <option value="1.5">1.5x</option>
+                  <option value="2">2x</option>
+                  <option value="2.5">2.5x</option>
+                  <option value="3">3x</option>
+                </select>
+              </label>
+              <label>
+                放大镜尺寸
+                <select id="magnifierSize">
+                  <option value="150">小</option>
+                  <option value="190">中</option>
+                  <option value="240">大</option>
+                </select>
+              </label>
+            </div>
             <div class="recording-actions">
               <button id="startRecording" type="button" class="primary">开始录屏</button>
               <button id="stopRecording" type="button" disabled>停止并保存</button>

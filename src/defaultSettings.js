@@ -13,6 +13,7 @@ const defaultSettings = {
   },
   overlay: {
     visible: true,
+    protectedFromCapture: false,
     alwaysOnTop: true,
     locked: false,
     size: "medium",
@@ -41,6 +42,9 @@ const defaultSettings = {
     sourceName: "",
     includeMic: true,
     frameRate: 30,
+    magnifierEnabled: true,
+    magnifierZoom: 2,
+    magnifierSize: 190,
     region: null
   },
   windows: {

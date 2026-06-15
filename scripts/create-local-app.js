@@ -27,6 +27,14 @@ function setPlistValue(key, type, value) {
   }
 }
 
+function deletePlistValue(key) {
+  try {
+    plist(`Delete :${key}`);
+  } catch {
+    // Key already absent.
+  }
+}
+
 function copyAppSource() {
   fs.rmSync(outputApp, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(outputApp), { recursive: true });
@@ -50,6 +58,8 @@ function updatePlist() {
   setPlistValue("CFBundleIconFile", "string", "app-logo");
   setPlistValue("CFBundleShortVersionString", "string", "0.1.0");
   setPlistValue("CFBundleVersion", "string", "0.1.0");
+  deletePlistValue("LSUIElement");
+  deletePlistValue("LSBackgroundOnly");
   setPlistValue(
     "NSCameraUsageDescription",
     "string",

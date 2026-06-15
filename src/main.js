@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, session, screen, systemPreferences, shell, desktopCapturer } = require("electron");
+const { app, BrowserWindow, ipcMain, globalShortcut, session, screen, systemPreferences, shell, desktopCapturer, Menu, Tray, nativeImage } = require("electron");
 const { execFile } = require("child_process");
 const fs = require("fs");
 const path = require("path");
@@ -9,6 +9,7 @@ let controlWindow;
 let overlayWindow;
 let prompterWindow;
 let regionWindow;
+let tray;
 let pendingRegionSelection;
 let saveTimer;
 
@@ -253,6 +254,7 @@ function updateSettings(partial, options = {}) {
   if (!options.silent) {
     applyWindowSettings();
     broadcastSettings();
+    updateTrayMenu();
   }
   return settings;
 }
@@ -278,6 +280,26 @@ function getDisplayCenteredBounds(width, height, offsetX = 0, offsetY = 0) {
     y: Math.round(display.y + (display.height - height) / 2 + offsetY),
     width,
     height
+  };
+}
+
+function displayToPayload(display) {
+  if (!display) return null;
+  return {
+    id: String(display.id),
+    bounds: {
+      x: display.bounds.x,
+      y: display.bounds.y,
+      width: display.bounds.width,
+      height: display.bounds.height
+    },
+    workArea: {
+      x: display.workArea.x,
+      y: display.workArea.y,
+      width: display.workArea.width,
+      height: display.workArea.height
+    },
+    scaleFactor: display.scaleFactor || 1
   };
 }
 
@@ -424,6 +446,7 @@ function applyOverlaySettings() {
   overlayWindow.setSize(size.width, size.height);
   overlayWindow.setAlwaysOnTop(settings.overlay.alwaysOnTop, "screen-saver");
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  overlayWindow.setContentProtection(Boolean(settings.overlay.protectedFromCapture));
   overlayWindow.setIgnoreMouseEvents(Boolean(settings.overlay.locked), { forward: true });
   if (settings.overlay.visible) overlayWindow.showInactive();
   else overlayWindow.hide();
@@ -442,6 +465,77 @@ function applyPrompterSettings() {
 function applyWindowSettings() {
   applyOverlaySettings();
   applyPrompterSettings();
+}
+
+function showControlWindow() {
+  if (!controlWindow || controlWindow.isDestroyed()) {
+    createControlWindow();
+  }
+  controlWindow.show();
+  controlWindow.focus();
+}
+
+function updateTrayMenu() {
+  if (!tray) return;
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: "显示控制台", click: showControlWindow },
+    {
+      label: settings.overlay.visible ? "隐藏名片" : "显示名片",
+      click: () => updateSettings({ overlay: { visible: !settings.overlay.visible } })
+    },
+    {
+      label: settings.prompter.visible ? "隐藏提词器" : "显示提词器",
+      click: () => updateSettings({ prompter: { visible: !settings.prompter.visible } })
+    },
+    { type: "separator" },
+    { label: "退出爪播", accelerator: "Command+Q", click: () => app.quit() }
+  ]));
+}
+
+function createTray() {
+  const iconPath = path.join(__dirname, "assets/branding/app-logo.png");
+  const image = nativeImage.createFromPath(iconPath).resize({ width: 18, height: 18 });
+  tray = new Tray(image);
+  tray.setToolTip("爪播 ClawCast Studio");
+  updateTrayMenu();
+  tray.on("click", showControlWindow);
+}
+
+function createApplicationMenu() {
+  const template = [
+    {
+      label: "爪播",
+      submenu: [
+        { label: "显示控制台", accelerator: "Command+Shift+C", click: showControlWindow },
+        { type: "separator" },
+        { label: "退出爪播", accelerator: "Command+Q", click: () => app.quit() }
+      ]
+    },
+    {
+      label: "窗口",
+      submenu: [
+        { label: "重置悬浮位置", click: () => {
+          const overlaySize = overlaySizes[settings.overlay.size] || overlaySizes.medium;
+          const overlayBounds = getDisplayCenteredBounds(overlaySize.width, overlaySize.height, 310, 140);
+          const prompterBounds = getDisplayCenteredBounds(settings.windows.prompter.width, settings.windows.prompter.height, 0, -250);
+          if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.setBounds(overlayBounds);
+          if (prompterWindow && !prompterWindow.isDestroyed()) prompterWindow.setBounds(prompterBounds);
+          updateSettings({
+            windows: {
+              overlay: { x: overlayBounds.x, y: overlayBounds.y },
+              prompter: {
+                x: prompterBounds.x,
+                y: prompterBounds.y,
+                width: prompterBounds.width,
+                height: prompterBounds.height
+              }
+            }
+          });
+        } }
+      ]
+    }
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 function recordingPayloadToBuffer(payload = {}) {
@@ -517,18 +611,25 @@ function registerIpc() {
     return true;
   });
   ipcMain.handle("recording:get-sources", async () => {
+    const displays = screen.getAllDisplays();
+    const displaysById = new Map(displays.map((display) => [String(display.id), display]));
     const sources = await desktopCapturer.getSources({
       types: ["screen", "window"],
       thumbnailSize: { width: 360, height: 220 },
       fetchWindowIcons: true
     });
-    return sources.map((source) => ({
-      id: source.id,
-      name: source.name,
-      type: source.id.startsWith("screen:") ? "screen" : "window",
-      displayId: source.display_id || "",
-      thumbnail: source.thumbnail?.toDataURL() || ""
-    }));
+    return sources.map((source) => {
+      const isScreen = source.id.startsWith("screen:");
+      const display = displaysById.get(String(source.display_id)) || (isScreen ? screen.getPrimaryDisplay() : null);
+      return {
+        id: source.id,
+        name: source.name,
+        type: isScreen ? "screen" : "window",
+        displayId: source.display_id || "",
+        displayBounds: displayToPayload(display),
+        thumbnail: source.thumbnail?.toDataURL() || ""
+      };
+    });
   });
   ipcMain.handle("recording:get-screen-access-status", () => {
     if (process.platform !== "darwin") return "unknown";
@@ -582,11 +683,29 @@ function registerIpc() {
     if (filePath) shell.showItemInFolder(filePath);
     return true;
   });
+  ipcMain.handle("cursor:get-position", () => {
+    const point = screen.getCursorScreenPoint();
+    const display = screen.getDisplayNearestPoint(point);
+    return {
+      x: point.x,
+      y: point.y,
+      displayId: String(display.id),
+      displayBounds: displayToPayload(display)
+    };
+  });
   ipcMain.handle("update:get-status", (_event, options) => getUpdateStatus(options));
   ipcMain.handle("update:run", () => runSourceUpdate());
   ipcMain.handle("app:restart", () => {
     app.relaunch({ args: process.argv.slice(1) });
     app.exit(0);
+    return true;
+  });
+  ipcMain.handle("app:quit", () => {
+    app.quit();
+    return true;
+  });
+  ipcMain.handle("window:show-control", () => {
+    showControlWindow();
     return true;
   });
 }
@@ -604,11 +723,15 @@ function registerShortcuts() {
 }
 
 app.whenReady().then(() => {
+  app.setName("爪播");
   loadSettings();
   if (process.platform === "darwin" && app.dock) {
+    app.dock.show();
     app.dock.setIcon(path.join(__dirname, "assets/branding/app-logo.png"));
   }
   registerIpc();
+  createApplicationMenu();
+  createTray();
   session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
     callback(["media", "camera", "microphone", "display-capture"].includes(permission));
   });
