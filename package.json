@@ -1,7 +1,7 @@
 {
   "name": "clawcast-studio",
   "version": "0.1.0",
-  "description": "Claworld branded Mac recording cockpit for AI creator videos, with a visible profile card and protected teleprompter.",
+  "description": "Claworld branded Mac floating overlay assistant with a visible profile card and protected teleprompter.",
   "main": "src/main.js",
   "author": "David",
   "license": "UNLICENSED",
@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer/control.js && node --check src/renderer/overlay.js && node --check src/renderer/prompter.js && node --check src/renderer/region.js && node --check scripts/create-local-app.js",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer/control.js && node --check src/renderer/overlay.js && node --check src/renderer/prompter.js && node --check scripts/create-local-app.js",
     "app:local": "node scripts/create-local-app.js",
     "app:open": "open \"dist/ClawCast Studio.app\"",
     "pack": "electron-builder --dir",
@@ -22,8 +22,7 @@
     "mac": {
       "category": "public.app-category.video",
       "extendInfo": {
-        "NSCameraUsageDescription": "爪播需要访问摄像头，用于录课名片里的真人画面。",
-        "NSMicrophoneUsageDescription": "爪播需要访问麦克风，用于录制你的讲解声音。"
+        "NSCameraUsageDescription": "爪播需要访问摄像头，用于悬浮名片里的真人画面。"
       },
       "target": [
         "dmg",

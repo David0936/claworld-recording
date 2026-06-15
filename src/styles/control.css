@@ -57,12 +57,6 @@ button.primary {
   background: var(--claw-red);
 }
 
-button.danger {
-  border-color: rgba(245, 29, 42, 0.34);
-  color: var(--claw-red);
-  background: rgba(245, 29, 42, 0.08);
-}
-
 .shell {
   min-height: 100vh;
   padding: 24px 28px 28px;
@@ -80,17 +74,15 @@ button.danger {
 .brand-lockup {
   display: flex;
   align-items: center;
-  width: min(260px, 34vw);
-  height: 82px;
+  width: min(340px, 42vw);
+  height: 42px;
   overflow: hidden;
 }
 
 .brand-lockup img {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: left center;
+  height: auto;
 }
 
 .eyebrow {
@@ -110,13 +102,6 @@ h1 {
   letter-spacing: 0;
 }
 
-.top-action-stack {
-  display: grid;
-  gap: 8px;
-  justify-items: end;
-  max-width: 760px;
-}
-
 .top-actions,
 .prompt-actions {
   display: flex;
@@ -127,8 +112,6 @@ h1 {
 
 .top-actions,
 .top-actions *,
-.top-action-stack,
-.top-action-stack *,
 .prompt-actions,
 .prompt-actions *,
 .preview-pane,
@@ -139,33 +122,6 @@ textarea,
 select,
 label {
   -webkit-app-region: no-drag;
-}
-
-.update-status {
-  max-width: 720px;
-  margin: 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.35;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.update-status[data-state="available"],
-.update-status[data-state="updated"] {
-  color: var(--claw-red);
-}
-
-.update-status[data-state="blocked"],
-.update-status[data-state="error"] {
-  color: #9f1f1f;
-}
-
-.update-status[data-state="busy"] {
-  color: #8b5a00;
 }
 
 .workspace {
@@ -189,15 +145,6 @@ label {
   background:
     linear-gradient(160deg, rgba(245, 29, 42, 0.14), transparent 42%),
     rgba(8, 8, 8, 0.94);
-}
-
-.preview-logo {
-  display: block;
-  width: min(100%, 252px);
-  height: 58px;
-  margin: 0 0 12px;
-  object-fit: contain;
-  object-position: left center;
 }
 
 .mini-card {
@@ -377,200 +324,6 @@ label {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.recording-status {
-  display: grid;
-  grid-template-columns: 12px minmax(0, 1fr);
-  gap: 4px 10px;
-  align-items: center;
-  min-height: 64px;
-  padding: 13px 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 248, 239, 0.7);
-}
-
-.quick-recording-bar {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid rgba(245, 29, 42, 0.16);
-  border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(245, 29, 42, 0.1), transparent 48%),
-    rgba(255, 255, 255, 0.72);
-}
-
-.quick-recording-bar button {
-  min-height: 48px;
-  font-weight: 950;
-}
-
-.permission-panel {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto auto;
-  gap: 10px;
-  align-items: stretch;
-}
-
-.permission-card {
-  display: grid;
-  gap: 4px;
-  min-height: 52px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.76);
-}
-
-.permission-card span {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.permission-card strong {
-  font-size: 13px;
-  line-height: 1.2;
-}
-
-.permission-card[data-state="granted"] {
-  border-color: rgba(20, 138, 73, 0.3);
-  background: rgba(20, 138, 73, 0.08);
-}
-
-.permission-card[data-state="blocked"] {
-  border-color: rgba(176, 0, 32, 0.28);
-  background: rgba(176, 0, 32, 0.06);
-}
-
-.permission-card[data-state="unknown"] {
-  border-color: rgba(217, 144, 0, 0.28);
-  background: rgba(217, 144, 0, 0.07);
-}
-
-.source-picker {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-  gap: 10px;
-  min-height: 0;
-}
-
-.source-card {
-  display: grid;
-  gap: 8px;
-  min-height: 116px;
-  padding: 8px;
-  text-align: left;
-  background: rgba(255, 255, 255, 0.78);
-}
-
-.source-card img {
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  object-fit: cover;
-  background: #111;
-}
-
-.source-card span {
-  overflow: hidden;
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.source-card.active {
-  border-color: rgba(245, 29, 42, 0.66);
-  box-shadow: 0 0 0 3px rgba(245, 29, 42, 0.1);
-}
-
-.source-empty {
-  min-height: 48px;
-  padding: 14px;
-  border: 1px dashed var(--line);
-  border-radius: 8px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 900;
-  background: rgba(255, 255, 255, 0.58);
-}
-
-.recording-status span {
-  grid-row: 1 / span 2;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--muted);
-}
-
-.recording-status strong {
-  font-size: 15px;
-}
-
-.recording-status small {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
-  white-space: normal;
-}
-
-.recording-status[data-state="recording"] span {
-  background: var(--claw-red);
-  box-shadow: 0 0 0 6px rgba(245, 29, 42, 0.12);
-}
-
-.recording-status[data-state="saving"] span {
-  background: #d99000;
-}
-
-.recording-status[data-state="done"] span {
-  background: #148a49;
-}
-
-.recording-status[data-state="error"] span {
-  background: #b00020;
-}
-
-.region-summary {
-  min-height: 42px;
-  padding: 11px 12px;
-  border: 1px dashed rgba(245, 29, 42, 0.32);
-  border-radius: 8px;
-  color: var(--muted);
-  background: rgba(245, 29, 42, 0.06);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.recording-effect-panel {
-  display: grid;
-  grid-template-columns: 1.1fr minmax(120px, 0.7fr) minmax(120px, 0.7fr);
-  gap: 10px;
-  align-items: end;
-  padding: 12px;
-  border: 1px solid rgba(245, 29, 42, 0.14);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.58);
-}
-
-.recording-actions {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
-  gap: 10px;
-}
-
-button:disabled,
-select:disabled,
-input:disabled {
-  cursor: not-allowed;
-  opacity: 0.52;
-}
-
 .panel {
   overflow: hidden;
 }
@@ -612,10 +365,6 @@ input:disabled {
 
 .grid.two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.grid.three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 label {
@@ -691,26 +440,6 @@ input[type="color"] {
   }
 
   .grid.two {
-    grid-template-columns: 1fr;
-  }
-
-  .grid.three {
-    grid-template-columns: 1fr;
-  }
-
-  .recording-actions {
-    grid-template-columns: 1fr;
-  }
-
-  .quick-recording-bar {
-    grid-template-columns: 1fr;
-  }
-
-  .permission-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .recording-effect-panel {
     grid-template-columns: 1fr;
   }
 }

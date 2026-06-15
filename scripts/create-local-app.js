@@ -72,13 +72,9 @@ function updatePlist() {
   setPlistValue(
     "NSCameraUsageDescription",
     "string",
-    "爪播需要访问摄像头，用于录课名片里的真人画面。"
+    "爪播需要访问摄像头，用于悬浮名片里的真人画面。"
   );
-  setPlistValue(
-    "NSMicrophoneUsageDescription",
-    "string",
-    "爪播需要访问麦克风，用于录制你的讲解声音。"
-  );
+  deletePlistValue("NSMicrophoneUsageDescription");
 }
 
 function signApp() {

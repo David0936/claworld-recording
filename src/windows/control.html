@@ -11,33 +11,23 @@
       <header class="topbar">
         <div>
           <div class="brand-lockup">
-            <img src="../assets/branding/logo-light.png" alt="爪播 ClawCast Studio" />
+            <img src="../assets/branding/logo-dark.png" alt="Claworld" />
           </div>
           <p class="eyebrow">ClawCast Studio · 爪播</p>
-          <h1>AI 创作者录播控制台</h1>
+          <h1>AI 创作者悬浮助手</h1>
         </div>
-        <div class="top-action-stack">
-          <div class="top-actions">
-            <button id="quickRecord" class="primary" type="button">快速录屏</button>
-            <button id="quickSelectWindow" type="button">快速选窗口</button>
-            <button id="toggleOverlay" class="primary">显示名片</button>
-            <button id="togglePrompter">显示提词器</button>
-            <button id="resetPositions">重置位置</button>
-            <button id="checkUpdate">检查更新</button>
-            <button id="runUpdate">一键更新</button>
-            <button id="restartApp" disabled>重启应用</button>
-            <button id="quitApp" class="danger" type="button">退出爪播</button>
-          </div>
-          <p class="update-status" id="updateStatus">GitHub 同步：未检查</p>
+        <div class="top-actions">
+          <button id="toggleOverlay" class="primary">显示名片</button>
+          <button id="togglePrompter">显示提词器</button>
+          <button id="resetPositions">重置位置</button>
         </div>
       </header>
 
       <section class="workspace">
         <aside class="preview-pane">
-          <img class="preview-logo" src="../assets/branding/logo-dark.png" alt="爪播 ClawCast Studio" />
           <div class="mini-card" id="miniCard">
             <div class="mini-top" id="miniTop">
-              <img src="../assets/branding/app-logo.png" alt="" />
+              <img src="../assets/branding/claw-icon-v2.png" alt="" />
               <span>ON AIR PROFILE</span>
             </div>
             <div class="mini-content">
@@ -64,7 +54,6 @@
           <div class="tabs" role="tablist">
             <button class="tab active" data-tab="profile">个人名片</button>
             <button class="tab" data-tab="style">悬浮样式</button>
-            <button class="tab" data-tab="recording">开始录屏</button>
             <button class="tab" data-tab="prompter">口播提词</button>
           </div>
 
@@ -134,7 +123,7 @@
               <label>
                 显示模式
                 <select id="style">
-                  <option value="record">录课模式</option>
+                  <option value="record">品牌模式</option>
                   <option value="clean">清晰模式</option>
                 </select>
               </label>
@@ -153,10 +142,6 @@
                 <span>显示名片窗口</span>
               </label>
               <label class="toggle-line">
-                <input id="overlayProtectedFromCapture" type="checkbox" />
-                <span>名片隐身（不进录屏）</span>
-              </label>
-              <label class="toggle-line">
                 <input id="showCta" type="checkbox" />
                 <span>显示关注引导</span>
               </label>
@@ -168,96 +153,6 @@
                 <input id="locked" type="checkbox" />
                 <span>鼠标穿透（锁定位置）</span>
               </label>
-            </div>
-          </form>
-
-          <form class="tab-panel" id="recordingPanel" data-panel="recording">
-            <div class="quick-recording-bar">
-              <button id="quickRecordInPanel" type="button" class="primary">一键录当前屏幕</button>
-              <button id="quickSelectWindowInPanel" type="button">快速选择窗口</button>
-              <button id="systemPickerRecord" type="button">系统选择器录屏</button>
-            </div>
-            <div class="recording-status" id="recordingStatus">
-              <span id="recordingDot"></span>
-              <strong id="recordingStatusTitle">未开始录屏</strong>
-              <small id="recordingStatusDetail">选择屏幕、窗口或框选区域后点击开始。</small>
-            </div>
-            <div class="permission-panel">
-              <div class="permission-card" id="screenPermissionCard">
-                <span>屏幕录制</span>
-                <strong id="screenPermissionText">检查中</strong>
-              </div>
-              <div class="permission-card" id="cameraPermissionCard">
-                <span>摄像头</span>
-                <strong id="cameraPermissionText">检查中</strong>
-              </div>
-              <div class="permission-card" id="micPermissionCard">
-                <span>麦克风</span>
-                <strong id="micPermissionText">检查中</strong>
-              </div>
-              <button id="refreshPermissions" type="button">刷新权限状态</button>
-              <button id="restartAfterPermission" type="button">授权后重启 App</button>
-            </div>
-            <div class="grid two">
-              <label>
-                录制范围
-                <select id="recordingMode">
-                  <option value="screen">整个屏幕</option>
-                  <option value="window">应用窗口</option>
-                  <option value="region">框选区域</option>
-                </select>
-              </label>
-              <label>
-                帧率
-                <select id="recordingFrameRate">
-                  <option value="24">24 fps</option>
-                  <option value="30">30 fps</option>
-                  <option value="60">60 fps</option>
-                </select>
-              </label>
-            </div>
-            <label>
-              屏幕或窗口
-              <select id="recordingSourceId"></select>
-            </label>
-            <div class="source-picker" id="sourcePicker"></div>
-            <div class="grid three recording-source-actions">
-              <button id="refreshRecordingSources" type="button">刷新可录窗口</button>
-              <button id="openScreenPrivacy" type="button">打开录屏权限设置</button>
-              <button id="selectRecordingRegion" type="button">框选录制区域</button>
-            </div>
-            <div class="region-summary" id="regionSummary">未选择区域</div>
-            <label class="toggle-line">
-              <input id="includeMic" type="checkbox" />
-              <span>同时录麦克风</span>
-            </label>
-            <div class="recording-effect-panel">
-              <label class="toggle-line">
-                <input id="magnifierEnabled" type="checkbox" />
-                <span>鼠标局部放大</span>
-              </label>
-              <label>
-                放大倍数
-                <select id="magnifierZoom">
-                  <option value="1.5">1.5x</option>
-                  <option value="2">2x</option>
-                  <option value="2.5">2.5x</option>
-                  <option value="3">3x</option>
-                </select>
-              </label>
-              <label>
-                放大镜尺寸
-                <select id="magnifierSize">
-                  <option value="150">小</option>
-                  <option value="190">中</option>
-                  <option value="240">大</option>
-                </select>
-              </label>
-            </div>
-            <div class="recording-actions">
-              <button id="startRecording" type="button" class="primary">开始录屏</button>
-              <button id="stopRecording" type="button" disabled>停止并保存</button>
-              <button id="openRecordingFile" type="button" disabled>打开最近文件</button>
             </div>
           </form>
 
