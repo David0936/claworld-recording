@@ -312,7 +312,7 @@ function showScreenPermissionRequired() {
   renderSourcePicker();
   setRecordingStatus(
     "暂时读取不到录屏来源",
-    "如果系统开关已经打开，请点“授权后重启 App”。如果仍不行，再打开录屏权限设置确认“爪播”和 Electron 都已允许。",
+    "可以先点“系统选择器录屏”继续录；如果想恢复缩略图来源，请点“授权后重启 App”。",
     "error"
   );
   renderRecordingControls();
@@ -420,6 +420,7 @@ function renderRecordingControls() {
     const button = $(id);
     if (button) button.disabled = isRecording;
   }
+  $("systemPickerRecord").disabled = isRecording;
   $("startRecording").disabled = isRecording || !hasSource;
   $("stopRecording").disabled = !isRecording;
   $("openRecordingFile").disabled = !lastRecordingPath;
@@ -495,7 +496,7 @@ async function quickRecordScreen() {
   setRecordingStatus("准备快速录屏", "正在选择当前屏幕。", "saving");
   const source = await chooseFirstRecordingSource("screen");
   if (!source) {
-    showScreenPermissionRequired();
+    await startSystemPickerRecording();
     return;
   }
   await startRecording();
@@ -771,6 +772,37 @@ async function createRecordingStream(source, mode, region, includeMic, frameRate
   return new MediaStream(tracks);
 }
 
+async function createSystemPickerRecordingStream(includeMic, frameRate) {
+  if (!navigator.mediaDevices?.getDisplayMedia) {
+    throw new Error("当前 Electron 不支持系统选择器录屏。");
+  }
+
+  activeDisplayStream = await navigator.mediaDevices.getDisplayMedia({
+    audio: false,
+    video: {
+      frameRate,
+      width: { ideal: 1920 },
+      height: { ideal: 1080 }
+    }
+  });
+
+  const tracks = [...activeDisplayStream.getVideoTracks()];
+
+  if (includeMic) {
+    activeMicStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      },
+      video: false
+    });
+    tracks.push(...activeMicStream.getAudioTracks());
+  }
+
+  return new MediaStream(tracks);
+}
+
 function cleanupRecordingStreams() {
   stopCursorPolling();
   if (activeDrawFrame) {
@@ -833,12 +865,27 @@ async function saveCurrentRecording(mimeType) {
 function recordingErrorCopy(error) {
   const name = error?.name || String(error || "");
   if (name === "NotAllowedError" || name === "SecurityError") {
-    return ["录屏权限被系统拒绝", "如果系统开关已经打开，请点“授权后重启 App”。仍失败时，在系统设置里移除爪播/Electron 后重新添加。"];
+    return ["录屏权限被系统拒绝", "可以先用“系统选择器录屏”继续录；如果仍被拒绝，请点“授权后重启 App”，再检查系统录屏权限。"];
   }
   if (name === "NotReadableError") {
     return ["无法读取录制来源", "目标窗口可能关闭了，刷新后重选。"];
   }
   return ["开始录屏失败", "刷新来源或重新选择窗口后再试。"];
+}
+
+function beginRecording(stream) {
+  recordedChunks = [];
+  const mimeType = preferredMimeType();
+  mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  mediaRecorder.addEventListener("dataavailable", (event) => {
+    if (event.data && event.data.size > 0) recordedChunks.push(event.data);
+  });
+  mediaRecorder.addEventListener("stop", () => saveCurrentRecording(mediaRecorder.mimeType));
+  mediaRecorder.start(1000);
+  recordingStartedAt = Date.now();
+  startRecordingTimer();
+  setRecordingStatus("正在录屏", "00:00 · 点击停止并保存", "recording");
+  renderRecordingControls();
 }
 
 async function startRecording() {
@@ -868,20 +915,38 @@ async function startRecording() {
   setRecordingStatus("正在请求录屏权限", "如果系统弹窗出现，请允许屏幕录制。", "saving");
   try {
     const stream = await createRecordingStream(source, mode, region, includeMic, frameRate);
-    recordedChunks = [];
-    const mimeType = preferredMimeType();
-    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-    mediaRecorder.addEventListener("dataavailable", (event) => {
-      if (event.data && event.data.size > 0) recordedChunks.push(event.data);
-    });
-    mediaRecorder.addEventListener("stop", () => saveCurrentRecording(mediaRecorder.mimeType));
-    mediaRecorder.start(1000);
-    recordingStartedAt = Date.now();
-    startRecordingTimer();
-    setRecordingStatus("正在录屏", "00:00 · 点击停止并保存", "recording");
-    renderRecordingControls();
+    beginRecording(stream);
   } catch (error) {
     console.error("Recording start failed", error);
+    cleanupRecordingStreams();
+    const [title, detail] = recordingErrorCopy(error);
+    setRecordingStatus(title, detail, "error");
+    renderRecordingControls();
+  }
+}
+
+async function startSystemPickerRecording() {
+  if (isRecordingActive()) return;
+  activateTab("recording");
+
+  const frameRate = Number(fields.recordingFrameRate.value);
+  const includeMic = fields.includeMic.checked;
+
+  await updateRecordingSettings({
+    mode: "screen",
+    sourceId: "system-picker",
+    sourceName: "系统选择器",
+    includeMic,
+    frameRate,
+    region: null
+  });
+
+  setRecordingStatus("打开系统选择器", "在系统弹窗里选择屏幕或窗口，然后开始录制。", "saving");
+  try {
+    const stream = await createSystemPickerRecordingStream(includeMic, frameRate);
+    beginRecording(stream);
+  } catch (error) {
+    console.error("System picker recording failed", error);
     cleanupRecordingStreams();
     const [title, detail] = recordingErrorCopy(error);
     setRecordingStatus(title, detail, "error");
@@ -1009,6 +1074,7 @@ function setupBindings() {
   $("quickRecordInPanel").addEventListener("click", quickRecordScreen);
   $("quickSelectWindow").addEventListener("click", quickSelectWindow);
   $("quickSelectWindowInPanel").addEventListener("click", quickSelectWindow);
+  $("systemPickerRecord").addEventListener("click", startSystemPickerRecording);
   $("refreshRecordingSources").addEventListener("click", refreshRecordingSources);
   $("openScreenPrivacy").addEventListener("click", () => window.overlayApp.openScreenPrivacy());
   $("selectRecordingRegion").addEventListener("click", selectRecordingRegion);

@@ -391,7 +391,7 @@ label {
 
 .quick-recording-bar {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   padding: 10px;
   border: 1px solid rgba(245, 29, 42, 0.16);
