@@ -8,6 +8,7 @@ let controlWindow;
 let overlayWindow;
 let prompterWindow;
 let saveTimer;
+let isQuitting = false;
 
 const overlaySizes = {
   small: { width: 300, height: 210 },
@@ -119,6 +120,15 @@ function createControlWindow() {
   controlWindow.setContentProtection(false);
   controlWindow.loadFile(path.join(__dirname, "windows/control.html"));
   controlWindow.once("ready-to-show", () => controlWindow.show());
+  controlWindow.on("close", (event) => {
+    if (isQuitting) return;
+    isQuitting = true;
+    event.preventDefault();
+    app.quit();
+  });
+  controlWindow.on("closed", () => {
+    controlWindow = null;
+  });
   controlWindow.on("resize", () => {
     const [width, height] = controlWindow.getSize();
     updateSettings({ windows: { control: { width, height } } }, { silent: true });
@@ -155,6 +165,9 @@ function createOverlayWindow() {
     const [x, y] = overlayWindow.getPosition();
     updateSettings({ windows: { overlay: { x, y } } }, { silent: true });
   });
+  overlayWindow.on("closed", () => {
+    overlayWindow = null;
+  });
 }
 
 function createPrompterWindow() {
@@ -188,6 +201,9 @@ function createPrompterWindow() {
   });
   prompterWindow.on("move", persistPrompterBounds);
   prompterWindow.on("resize", persistPrompterBounds);
+  prompterWindow.on("closed", () => {
+    prompterWindow = null;
+  });
 }
 
 function persistPrompterBounds() {
@@ -353,7 +369,11 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
+  app.quit();
+});
+
+app.on("before-quit", () => {
+  isQuitting = true;
 });
 
 app.on("will-quit", () => {
