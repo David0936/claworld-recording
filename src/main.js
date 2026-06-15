@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, session, screen, systemPreferences, shell, desktopCapturer, Menu, Tray, nativeImage } = require("electron");
 const { execFile } = require("child_process");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { defaultSettings } = require("./defaultSettings");
 
@@ -655,11 +656,7 @@ function recordingPayloadToBuffer(payload = {}) {
 }
 
 function recordingsDir() {
-  try {
-    return path.join(app.getPath("videos"), "ClawCast Studio");
-  } catch {
-    return path.join(app.getPath("home"), "Movies", "ClawCast Studio");
-  }
+  return path.join(os.homedir(), "Movies", "ClawCast Studio");
 }
 
 function registerIpc() {
