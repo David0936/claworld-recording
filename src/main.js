@@ -303,6 +303,108 @@ function displayToPayload(display) {
   };
 }
 
+async function getRecordingSources() {
+  const displays = screen.getAllDisplays();
+  const displaysById = new Map(displays.map((display) => [String(display.id), display]));
+  const sources = await desktopCapturer.getSources({
+    types: ["screen", "window"],
+    thumbnailSize: { width: 360, height: 220 },
+    fetchWindowIcons: true
+  });
+  return sources.map((source) => {
+    const isScreen = source.id.startsWith("screen:");
+    const display = displaysById.get(String(source.display_id)) || (isScreen ? screen.getPrimaryDisplay() : null);
+    return {
+      id: source.id,
+      name: source.name,
+      type: isScreen ? "screen" : "window",
+      displayId: source.display_id || "",
+      displayBounds: displayToPayload(display),
+      thumbnail: source.thumbnail?.toDataURL() || ""
+    };
+  });
+}
+
+async function logCaptureDiagnostics() {
+  try {
+    const screenAccess = process.platform === "darwin" ? systemPreferences.getMediaAccessStatus("screen") : "unknown";
+    const displays = screen.getAllDisplays();
+    console.log("[recording:diagnose]", {
+      screenAccess,
+      displayCount: displays.length,
+      displays: displays.map(displayToPayload)
+    });
+    const sources = await getRecordingSources();
+    console.log("[recording:diagnose:sources]", sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      type: source.type,
+      displayId: source.displayId,
+      hasDisplayBounds: Boolean(source.displayBounds),
+      hasThumbnail: Boolean(source.thumbnail)
+    })));
+  } catch (error) {
+    console.error("[recording:diagnose:error]", error);
+  }
+}
+
+async function runRecordingSmokeTest() {
+  try {
+    if (!controlWindow || controlWindow.isDestroyed()) return;
+    const sources = await getRecordingSources();
+    const source = sources.find((item) => item.type === "screen") || sources[0];
+    if (!source) throw new Error("No desktop source available for smoke test.");
+    const shouldSave = process.env.CLAWCAST_RECORDING_SMOKE_SAVE === "1";
+    const result = await controlWindow.webContents.executeJavaScript(`
+      (async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            mandatory: {
+              chromeMediaSource: "desktop",
+              chromeMediaSourceId: ${JSON.stringify(source.id)},
+              maxFrameRate: 30
+            }
+          }
+        });
+        const chunks = [];
+        const type = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+          ? "video/webm;codecs=vp9"
+          : "video/webm";
+        const recorder = new MediaRecorder(stream, { mimeType: type });
+        recorder.addEventListener("dataavailable", (event) => {
+          if (event.data && event.data.size) chunks.push(event.data);
+        });
+        await new Promise((resolve, reject) => {
+          recorder.addEventListener("error", () => reject(recorder.error || new Error("MediaRecorder error")));
+          recorder.addEventListener("stop", resolve, { once: true });
+          recorder.start(250);
+          setTimeout(() => recorder.stop(), 1200);
+        });
+        for (const track of stream.getTracks()) track.stop();
+        const blob = new Blob(chunks, { type });
+        const result = { sourceId: ${JSON.stringify(source.id)}, sourceName: ${JSON.stringify(source.name)}, type, size: blob.size };
+        if (${JSON.stringify(shouldSave)}) {
+          const buffer = await blob.arrayBuffer();
+          result.bytes = Array.from(new Uint8Array(buffer));
+        }
+        return result;
+      })();
+    `);
+    if (shouldSave && result.bytes?.length) {
+      const dir = recordingsDir();
+      fs.mkdirSync(dir, { recursive: true });
+      const filePath = path.join(dir, `ClawCast-smoke-${Date.now()}.webm`);
+      fs.writeFileSync(filePath, Buffer.from(result.bytes));
+      result.savedPath = filePath;
+      delete result.bytes;
+    }
+    console.log("[recording:smoke]", result);
+  } catch (error) {
+    console.error("[recording:smoke:error]", error);
+  }
+}
+
 function createControlWindow() {
   const { width, height } = settings.windows.control;
   controlWindow = new BrowserWindow(
@@ -323,7 +425,12 @@ function createControlWindow() {
   // in screenshots/recordings. Only the teleprompter uses capture protection.
   controlWindow.setContentProtection(false);
   controlWindow.loadFile(path.join(__dirname, "windows/control.html"));
-  controlWindow.once("ready-to-show", () => controlWindow.show());
+  controlWindow.once("ready-to-show", () => {
+    controlWindow.show();
+    if (process.env.CLAWCAST_RECORDING_SMOKE === "1") {
+      setTimeout(runRecordingSmokeTest, 1200);
+    }
+  });
   controlWindow.on("resize", () => {
     const [width, height] = controlWindow.getSize();
     updateSettings({ windows: { control: { width, height } } }, { silent: true });
@@ -547,6 +654,14 @@ function recordingPayloadToBuffer(payload = {}) {
   throw new Error("没有收到可写入的视频数据。");
 }
 
+function recordingsDir() {
+  try {
+    return path.join(app.getPath("videos"), "ClawCast Studio");
+  } catch {
+    return path.join(app.getPath("home"), "Movies", "ClawCast Studio");
+  }
+}
+
 function registerIpc() {
   ipcMain.handle("settings:get", () => settings);
   ipcMain.handle("settings:update", (_event, partial) => updateSettings(partial));
@@ -611,25 +726,12 @@ function registerIpc() {
     return true;
   });
   ipcMain.handle("recording:get-sources", async () => {
-    const displays = screen.getAllDisplays();
-    const displaysById = new Map(displays.map((display) => [String(display.id), display]));
-    const sources = await desktopCapturer.getSources({
-      types: ["screen", "window"],
-      thumbnailSize: { width: 360, height: 220 },
-      fetchWindowIcons: true
-    });
-    return sources.map((source) => {
-      const isScreen = source.id.startsWith("screen:");
-      const display = displaysById.get(String(source.display_id)) || (isScreen ? screen.getPrimaryDisplay() : null);
-      return {
-        id: source.id,
-        name: source.name,
-        type: isScreen ? "screen" : "window",
-        displayId: source.display_id || "",
-        displayBounds: displayToPayload(display),
-        thumbnail: source.thumbnail?.toDataURL() || ""
-      };
-    });
+    try {
+      return await getRecordingSources();
+    } catch (error) {
+      console.error("[recording:get-sources:error]", error);
+      throw error;
+    }
   });
   ipcMain.handle("recording:get-screen-access-status", () => {
     if (process.platform !== "darwin") return "unknown";
@@ -664,7 +766,7 @@ function registerIpc() {
     return true;
   });
   ipcMain.handle("recording:save", async (_event, payload) => {
-    const dir = path.join(app.getPath("movies"), "ClawCast Studio");
+    const dir = recordingsDir();
     fs.mkdirSync(dir, { recursive: true });
     const safeName = new Date().toISOString().replace(/[:.]/g, "-");
     const filePath = path.join(dir, `ClawCast-${safeName}.webm`);
@@ -739,6 +841,9 @@ app.whenReady().then(() => {
   createOverlayWindow();
   createPrompterWindow();
   registerShortcuts();
+  if (process.env.CLAWCAST_DEBUG_CAPTURE === "1") {
+    setTimeout(logCaptureDiagnostics, 1200);
+  }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createControlWindow();

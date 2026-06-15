@@ -8,6 +8,8 @@ const outputApp = path.join(root, "dist/ClawCast Studio.app");
 const resourcesDir = path.join(outputApp, "Contents/Resources");
 const bundledAppDir = path.join(resourcesDir, "app");
 const plistPath = path.join(outputApp, "Contents/Info.plist");
+const appProcessPattern = "ClawCast Studio.app/Contents/MacOS/Electron";
+const helperProcessPattern = "user-data-dir=.*clawcast-studio";
 
 function ensureExists(target, message) {
   if (!fs.existsSync(target)) {
@@ -36,6 +38,7 @@ function deletePlistValue(key) {
 }
 
 function copyAppSource() {
+  stopRunningApp();
   fs.rmSync(outputApp, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(outputApp), { recursive: true });
   execFileSync("/bin/cp", ["-R", sourceApp, outputApp]);
@@ -48,6 +51,12 @@ function copyAppSource() {
     path.join(root, "src/assets/branding/app-logo.icns"),
     path.join(resourcesDir, "app-logo.icns")
   );
+}
+
+function stopRunningApp() {
+  for (const pattern of [appProcessPattern, helperProcessPattern]) {
+    spawnSync("pkill", ["-f", pattern], { stdio: "ignore" });
+  }
 }
 
 function updatePlist() {
